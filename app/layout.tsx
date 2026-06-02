@@ -1,13 +1,15 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Providers } from './providers'
+import { APP_TITLE, APP_DESCRIPTION, APP_THEME_COLOR } from '@/config/ui_config'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: 'AEX - Cross-Chain BION Token Bridge',
-  description: 'Bridge BION tokens seamlessly across Solana, Base, and Polygon. Powered by Bion DAO & Bion Foundation.',
+  title: APP_TITLE,
+  description: APP_DESCRIPTION,
   icons: {
     icon: [
       {
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#000000',
+  themeColor: APP_THEME_COLOR,
 }
 
 export default function RootLayout({
@@ -39,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <Providers>{children}</Providers>
         <Analytics />
       </body>
     </html>
