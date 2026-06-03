@@ -117,6 +117,8 @@ export function BridgeCard() {
       const result = await executeSteps(quoteState.quote.raw.steps, {
         evm: evmSigner,
         svm: svmSigner,
+        originChainId: getActiveChain(fromChain).relayChainId,
+        destinationChainId: getActiveChain(toChain).relayChainId,
         onProgress: (p) => {
           if (p.kind === 'tx-sent') {
             setProgress({

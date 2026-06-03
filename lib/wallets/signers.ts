@@ -13,6 +13,10 @@ import {
   Connection,
   VersionedTransaction,
   Transaction,
+  PublicKey,
+  TransactionInstruction,
+  TransactionMessage,
+  AddressLookupTableAccount,
 } from '@solana/web3.js';
 import type { EvmSigner, SvmSigner } from '@/lib/relay/execute';
 
@@ -24,6 +28,18 @@ const decodeBase64ToUint8 = (b64: string): Uint8Array => {
   return out;
 };
 
+const decodeHexToUint8 = (hex: string): Uint8Array => {
+  const stripped = hex.startsWith('0x') ? hex.slice(2) : hex;
+  if (stripped.length % 2 !== 0) {
+    throw new Error(`Invalid hex string of odd length (${stripped.length})`);
+  }
+  const out = new Uint8Array(stripped.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(stripped.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+};
+
 const parseSolanaTransaction = (b64: string): VersionedTransaction | Transaction => {
   const bytes = decodeBase64ToUint8(b64);
   try {
@@ -31,6 +47,53 @@ const parseSolanaTransaction = (b64: string): VersionedTransaction | Transaction
   } catch {
     return Transaction.from(bytes);
   }
+};
+
+// Relay's Solana step payload uses the structured form documented at
+// https://docs.relay.link/references/chain-support/solana — an array of
+// instructions plus a list of address lookup table accounts to resolve at
+// build time. We reconstruct the v0 message ourselves.
+type RelayRawInstruction = {
+  programId: string;
+  keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+  data: string; // hex-encoded
+};
+
+type RelayRawInstructionsPayload = {
+  instructions: RelayRawInstruction[];
+  addressLookupTableAddresses?: string[];
+};
+
+const isRelayRawInstructionsPayload = (
+  v: unknown
+): v is RelayRawInstructionsPayload => {
+  if (!v || typeof v !== 'object') return false;
+  const obj = v as Record<string, unknown>;
+  return Array.isArray(obj.instructions);
+};
+
+const buildInstruction = (raw: RelayRawInstruction): TransactionInstruction =>
+  new TransactionInstruction({
+    programId: new PublicKey(raw.programId),
+    keys: raw.keys.map((k) => ({
+      pubkey: new PublicKey(k.pubkey),
+      isSigner: Boolean(k.isSigner),
+      isWritable: Boolean(k.isWritable),
+    })),
+    data: Buffer.from(decodeHexToUint8(raw.data)),
+  });
+
+const resolveLookupTables = async (
+  connection: Connection,
+  addresses: string[]
+): Promise<AddressLookupTableAccount[]> => {
+  if (!addresses.length) return [];
+  const results = await Promise.all(
+    addresses.map((addr) => connection.getAddressLookupTable(new PublicKey(addr)))
+  );
+  return results
+    .map((r) => r.value)
+    .filter((v): v is AddressLookupTableAccount => v !== null);
 };
 
 export const useEvmSigner = (): EvmSigner | null => {
@@ -81,24 +144,56 @@ export const useSvmSigner = (): SvmSigner | null => {
       if (!wallet.connected || !wallet.publicKey) {
         throw new Error('Solana wallet not connected');
       }
+      if (!wallet.signTransaction) {
+        throw new Error('Wallet does not support signTransaction');
+      }
       const tx = parseSolanaTransaction(b64);
-      let signedTxBytes: Uint8Array;
+      const signed = await wallet.signTransaction(tx);
+      const signedTxBytes = signed.serialize();
+      const sig = await (connection as Connection).sendRawTransaction(signedTxBytes, {
+        skipPreflight: false,
+      });
+      await (connection as Connection).confirmTransaction(sig, 'confirmed').catch(() => {});
+      return sig;
+    },
+    [connection, wallet]
+  );
 
-      if (tx instanceof VersionedTransaction) {
-        if (!wallet.signTransaction) {
-          throw new Error('Wallet does not support signTransaction');
-        }
-        const signed = await wallet.signTransaction(tx);
-        signedTxBytes = signed.serialize();
-      } else {
-        if (!wallet.signTransaction) {
-          throw new Error('Wallet does not support signTransaction');
-        }
-        const signed = await wallet.signTransaction(tx);
-        signedTxBytes = signed.serialize();
+  const sendRawInstructions = useCallback(
+    async (payload: unknown): Promise<string> => {
+      if (!wallet.connected || !wallet.publicKey) {
+        throw new Error('Solana wallet not connected');
+      }
+      if (!wallet.signTransaction) {
+        throw new Error('Wallet does not support signTransaction');
       }
 
-      const sig = await (connection as Connection).sendRawTransaction(signedTxBytes, {
+      let instructionsRaw: RelayRawInstruction[];
+      let altAddresses: string[];
+
+      if (Array.isArray(payload)) {
+        instructionsRaw = payload as RelayRawInstruction[];
+        altAddresses = [];
+      } else if (isRelayRawInstructionsPayload(payload)) {
+        instructionsRaw = payload.instructions;
+        altAddresses = payload.addressLookupTableAddresses ?? [];
+      } else {
+        throw new Error('sendRawInstructions: unrecognised payload shape');
+      }
+
+      const instructions = instructionsRaw.map(buildInstruction);
+      const altAccounts = await resolveLookupTables(connection as Connection, altAddresses);
+      const { blockhash } = await (connection as Connection).getLatestBlockhash('confirmed');
+
+      const message = new TransactionMessage({
+        payerKey: wallet.publicKey,
+        recentBlockhash: blockhash,
+        instructions,
+      }).compileToV0Message(altAccounts);
+
+      const tx = new VersionedTransaction(message);
+      const signed = await wallet.signTransaction(tx);
+      const sig = await (connection as Connection).sendRawTransaction(signed.serialize(), {
         skipPreflight: false,
       });
       await (connection as Connection).confirmTransaction(sig, 'confirmed').catch(() => {});
@@ -109,6 +204,6 @@ export const useSvmSigner = (): SvmSigner | null => {
 
   return useMemo<SvmSigner | null>(() => {
     if (!wallet.connected) return null;
-    return { sendBase64Tx };
-  }, [wallet.connected, sendBase64Tx]);
+    return { sendBase64Tx, sendRawInstructions };
+  }, [wallet.connected, sendBase64Tx, sendRawInstructions]);
 };

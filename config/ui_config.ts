@@ -56,3 +56,8 @@ export const STATUS_COPY: Record<string, { title: string; body: string }> = {
   refunded: { title: 'Refunded', body: 'Your deposit was refunded.' },
   refund: { title: 'Refund in progress', body: 'A refund is being issued.' },
 };
+
+export const TOKEN_ICONS = {
+  fileType: 'webp',
+  fileSize: '64px',
+};

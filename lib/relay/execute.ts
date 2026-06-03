@@ -60,22 +60,74 @@ const hex = (v: unknown): `0x${string}` | undefined => {
   return v.startsWith('0x') ? (v as `0x${string}`) : (`0x${v}` as `0x${string}`);
 };
 
-const extractSolanaBase64Tx = (data: RelayTransactionData): string | undefined => {
-  const candidates = [
-    (data as Record<string, unknown>).data,
-    (data as Record<string, unknown>).transaction,
-    (data as Record<string, unknown>).serializedTransaction,
-    (data as Record<string, unknown>).tx,
+// Base64 character set (RFC 4648, padded). Used to detect serialized Solana
+// transactions inside the step payload without knowing the exact field name.
+const BASE64_LIKE = /^[A-Za-z0-9+/]+={0,2}$/;
+
+// A Solana wallet address is ~44 base58 chars, well below this floor. A real
+// serialized VersionedTransaction is hundreds of bytes ⇒ hundreds of base64
+// chars, so this threshold keeps account-id-style strings out of the match.
+const looksLikeBase64Tx = (s: string): boolean =>
+  s.length >= 150 && s.length <= 32768 && BASE64_LIKE.test(s);
+
+// Walks the step payload looking for a serialized Solana transaction. We try
+// the documented field names first, then fall back to a structural scan so we
+// survive minor shape changes in Relay's response.
+const extractSolanaBase64Tx = (data: unknown): string | undefined => {
+  if (typeof data === 'string' && looksLikeBase64Tx(data)) return data;
+  if (!data || typeof data !== 'object') return undefined;
+
+  const obj = data as Record<string, unknown>;
+  const namedCandidates = [
+    obj.data,
+    obj.transaction,
+    obj.serializedTransaction,
+    obj.serializedTx,
+    obj.tx,
+    obj.txBase64,
+    obj.payload,
+    obj.message,
+    obj.value,
+    obj.base64,
+    obj.signedTransaction,
+    obj.unsignedTransaction,
+    obj.encoded,
+    obj.raw,
   ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.length > 0) return c;
+  for (const c of namedCandidates) {
+    if (typeof c === 'string' && looksLikeBase64Tx(c)) return c;
   }
+
+  for (const value of Object.values(obj)) {
+    if (typeof value === 'string' && looksLikeBase64Tx(value)) return value;
+  }
+
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === 'object') {
+      const found = extractSolanaBase64Tx(value);
+      if (found) return found;
+    }
+  }
+
   return undefined;
+};
+
+const describeKeys = (data: unknown): string => {
+  if (!data || typeof data !== 'object') return typeof data;
+  const obj = data as Record<string, unknown>;
+  return Object.entries(obj)
+    .map(([k, v]) => `${k}:${typeof v === 'string' ? `string(${v.length})` : typeof v}`)
+    .join(', ');
 };
 
 export type ExecuteOptions = {
   evm: EvmSigner | null;
   svm: SvmSigner | null;
+  // Fallback chain ids used when an individual step's `data.chainId` is
+  // missing. Solana steps in particular don't echo the chain id back in the
+  // step payload, so the caller passes them in from the quote request.
+  originChainId?: number;
+  destinationChainId?: number;
   onProgress?: (p: ExecuteProgress) => void;
   signal?: AbortSignal;
 };
@@ -108,6 +160,12 @@ export const executeSteps = async (
   return result;
 };
 
+const hasSolanaTxBlob = (data: RelayTransactionData): boolean =>
+  extractSolanaBase64Tx(data) !== undefined;
+
+const looksLikeEvmStep = (data: RelayTransactionData): boolean =>
+  typeof data.to === 'string' && /^0x[a-fA-F0-9]{40}$/.test(data.to);
+
 async function runTxItem(
   step: RelayStep,
   item: RelayStepItem,
@@ -116,44 +174,82 @@ async function runTxItem(
   result: ExecuteResult
 ) {
   const data = item.data as RelayTransactionData;
-  const chainId = data.chainId;
+  // Deposit steps execute on the origin chain. When `data.chainId` is absent
+  // (Solana steps don't include one), fall back to the originChainId the
+  // caller passed in.
+  const chainId = data.chainId ?? opts.originChainId;
 
-  if (isEvmChainId(chainId)) {
+  const isEvm = chainId !== undefined ? isEvmChainId(chainId) : looksLikeEvmStep(data);
+  const isSvm =
+    chainId !== undefined ? isSolanaChainId(chainId) : hasSolanaTxBlob(data);
+
+  if (isEvm) {
     if (!opts.evm) throw new Error('EVM wallet required for this step');
-    await opts.evm.switchChain(chainId);
+    const effectiveChainId = chainId ?? opts.originChainId;
+    if (effectiveChainId === undefined) {
+      throw new Error(`Could not determine EVM chain id for step ${step.id}`);
+    }
+    await opts.evm.switchChain(effectiveChainId);
     const to = hex(data.to);
     const txData = hex(data.data) ?? ('0x' as `0x${string}`);
     if (!to) throw new Error('EVM step missing `to` address');
     const txHash = await opts.evm.sendTransaction({
-      chainId,
+      chainId: effectiveChainId,
       to,
       data: txData,
       value: toBig(data.value),
       maxFeePerGas: toBig(data.maxFeePerGas),
       maxPriorityFeePerGas: toBig(data.maxPriorityFeePerGas),
     });
-    result.txHashes.push({ chainId, txHash });
-    opts.onProgress?.({ kind: 'tx-sent', step, itemIndex, chainId, txHash });
+    result.txHashes.push({ chainId: effectiveChainId, txHash });
+    opts.onProgress?.({
+      kind: 'tx-sent',
+      step,
+      itemIndex,
+      chainId: effectiveChainId,
+      txHash,
+    });
     return;
   }
 
-  if (isSolanaChainId(chainId)) {
+  if (isSvm) {
     if (!opts.svm) throw new Error('Solana wallet required for this step');
+    const effectiveChainId = chainId ?? opts.originChainId ?? 0;
     const base64 = extractSolanaBase64Tx(data);
     let txHash: string;
     if (base64) {
       txHash = await opts.svm.sendBase64Tx(base64);
     } else if (opts.svm.sendRawInstructions && data.instructions) {
-      txHash = await opts.svm.sendRawInstructions(data.instructions);
+      // Relay returns structured instructions + ALT addresses for SVM origin
+      // steps. Hand the whole payload over so the signer can assemble a v0
+      // message with the resolved lookup tables.
+      txHash = await opts.svm.sendRawInstructions(data);
     } else {
-      throw new Error('Solana step had no recognisable transaction payload');
+      if (typeof window !== 'undefined') {
+        console.error('[relay/execute] Solana step had unexpected shape:', { step, data });
+      }
+      throw new Error(
+        `Solana step had no recognisable transaction payload. data fields: { ${describeKeys(
+          data
+        )} }`
+      );
     }
-    result.txHashes.push({ chainId, txHash });
-    opts.onProgress?.({ kind: 'tx-sent', step, itemIndex, chainId, txHash });
+    result.txHashes.push({ chainId: effectiveChainId, txHash });
+    opts.onProgress?.({
+      kind: 'tx-sent',
+      step,
+      itemIndex,
+      chainId: effectiveChainId,
+      txHash,
+    });
     return;
   }
 
-  throw new Error(`Unsupported chain id in step: ${chainId}`);
+  throw new Error(
+    `Unsupported chain id in step "${step.id}" (kind=${step.kind}, chainId=${String(
+      chainId
+    )}).`
+  );
 }
 
 async function runSigItem(
