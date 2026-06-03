@@ -33,16 +33,20 @@ export const APP_DESCRIPTION =
 export const APP_THEME_COLOR = '#000000';
 
 export const NAV_LINKS = [
+  { label: 'Bridge', href: '/' },
   { label: 'Powered by Aphid', href: 'https://aphid.com' },
-  { label: 'BION', href: 'https://www.bionfoundation.org/' },
+  { label: 'BION Token', href: 'https://www.bionfoundation.org/' },
+] as const;
+
+import { TERMS_ROUTE, PRIVACY_ROUTE } from './legal_config';
+
+export const FOOTER_LEGAL_LINKS = [
+  { label: 'Terms', href: TERMS_ROUTE },
+  { label: 'Privacy', href: PRIVACY_ROUTE },
   { label: '', href: '#' },
 ] as const;
 
-export const FOOTER_LEGAL_LINKS = [
-  { label: 'Terms', href: '#' },
-  { label: 'Privacy', href: '#' },
-  { label: '', href: '#' },
-] as const;
+export const LEGAL_PAGE_LAST_UPDATED_LABEL = 'Last updated';
 
 export const QUOTE_FEE_LABEL_BPS_FALLBACK = '0.5% fee';
 export const QUOTE_DEFAULT_ETA_LABEL = '~2 min';
