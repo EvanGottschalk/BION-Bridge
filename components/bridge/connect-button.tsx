@@ -1,10 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
+import { useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Loader2 } from 'lucide-react';
 import { EthereumIcon, SolanaIcon } from './chain-icons';
+import { WalletAccountModal } from './wallet-account-modal';
+import { getActiveChainByRelayId, type ActiveChainKey } from '@/config/active_chains';
 
 const shorten = (addr: string): string =>
   addr.length <= 12 ? addr : `${addr.slice(0, 5)}…${addr.slice(-4)}`;
@@ -12,6 +16,7 @@ const shorten = (addr: string): string =>
 function SolanaConnectPill() {
   const wallet = useWallet();
   const modal = useWalletModal();
+  const [accountOpen, setAccountOpen] = useState(false);
 
   if (wallet.connecting) {
     return (
@@ -29,15 +34,23 @@ function SolanaConnectPill() {
   if (wallet.connected && wallet.publicKey) {
     const address = wallet.publicKey.toBase58();
     return (
-      <button
-        type="button"
-        onClick={() => wallet.disconnect().catch(() => {})}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
-        title={`Disconnect ${wallet.wallet?.adapter.name ?? 'Solana wallet'}`}
-      >
-        <SolanaIcon className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">{shorten(address)}</span>
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={() => setAccountOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
+        >
+          <SolanaIcon className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{shorten(address)}</span>
+        </button>
+        <WalletAccountModal
+          open={accountOpen}
+          address={address}
+          chainKey="solana"
+          onClose={() => setAccountOpen(false)}
+          onDisconnect={() => wallet.disconnect().catch(() => {})}
+        />
+      </>
     );
   }
 
@@ -53,10 +66,18 @@ function SolanaConnectPill() {
   );
 }
 
+function evmChainKey(chainId: number | undefined): ActiveChainKey {
+  if (chainId === undefined) return 'ethereum';
+  return getActiveChainByRelayId(chainId)?.key ?? 'ethereum';
+}
+
 function EvmConnectPill() {
+  const [accountOpen, setAccountOpen] = useState(false);
+  const { disconnectAsync } = useDisconnect();
+
   return (
     <RainbowConnectButton.Custom>
-      {({ account, chain, openAccountModal, openConnectModal, openChainModal, mounted }) => {
+      {({ account, chain, openConnectModal, openChainModal, mounted }) => {
         if (!mounted) return null;
         if (!account || !chain) {
           return (
@@ -83,14 +104,23 @@ function EvmConnectPill() {
           );
         }
         return (
-          <button
-            type="button"
-            onClick={openAccountModal}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
-          >
-            <EthereumIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{shorten(account.address)}</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setAccountOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
+            >
+              <EthereumIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{shorten(account.address)}</span>
+            </button>
+            <WalletAccountModal
+              open={accountOpen}
+              address={account.address}
+              chainKey={evmChainKey(chain.id)}
+              onClose={() => setAccountOpen(false)}
+              onDisconnect={() => disconnectAsync().catch(() => {})}
+            />
+          </>
         );
       }}
     </RainbowConnectButton.Custom>

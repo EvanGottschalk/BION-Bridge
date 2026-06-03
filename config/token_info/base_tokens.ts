@@ -47,20 +47,6 @@ export const LINK = {
   decimals: 18,
 };
 
-export const USDbC = {
-  symbol: 'USDbC',
-  name: 'USD Base Coin (bridged USDC)',
-  address: '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA',
-  decimals: 6,
-};
-
-export const CBETH = {
-  symbol: 'cbETH',
-  name: 'Coinbase Wrapped Staked ETH',
-  address: '0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22',
-  decimals: 18,
-};
-
 export const DEGEN = {
   symbol: 'DEGEN',
   name: 'Degen',

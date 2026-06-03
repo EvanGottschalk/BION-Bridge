@@ -131,13 +131,6 @@ export const USDC = {
   decimals: 6,
 };
 
-export const TNSR = {
-  symbol: 'TNSR',
-  name: 'Tensor',
-  address: 'TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6',
-  decimals: 6,
-};
-
 export const USDu = {
   symbol: 'USDu',
   name: 'USDu Unify Pay',

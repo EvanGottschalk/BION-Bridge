@@ -14,6 +14,8 @@ import {
 } from '@/config/relay_config';
 import { relayApi } from '@/lib/relay/client';
 import type { RelayCurrency } from '@/lib/relay/types';
+import { TokenIcon } from './token-icon';
+import { useTokenBalance } from '@/hooks/use-token-balance';
 
 interface TokenSelectorProps {
   label: string;
@@ -24,40 +26,51 @@ interface TokenSelectorProps {
 
 const TokenRow = ({
   token,
+  chain,
   active,
   onClick,
 }: {
   token: TokenInfo;
+  chain: ActiveChainKey;
   active: boolean;
   onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer ${
-      active ? 'bg-primary/10 text-primary' : 'hover:bg-white/5 text-foreground'
-    }`}
-  >
-    <div className="flex items-center gap-3 min-w-0">
-      <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-semibold uppercase shrink-0">
-        {token.symbol.slice(0, 3)}
+}) => {
+  const balance = useTokenBalance(chain, token);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer ${
+        active ? 'bg-primary/10 text-primary' : 'hover:bg-white/5 text-foreground'
+      }`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <TokenIcon symbol={token.symbol} logoURI={token.logoURI} />
+        <div className="flex flex-col min-w-0">
+          <span className="font-medium leading-tight truncate">{token.symbol}</span>
+          <span className="text-xs text-muted-foreground leading-tight truncate">
+            {token.name}
+          </span>
+        </div>
       </div>
-      <div className="flex flex-col min-w-0">
-        <span className="font-medium leading-tight truncate">{token.symbol}</span>
-        <span className="text-xs text-muted-foreground leading-tight truncate">
-          {token.name}
-        </span>
-      </div>
-    </div>
-    <span className="text-[10px] text-muted-foreground uppercase tracking-wider shrink-0">
-      {token.decimals ?? '?'} dec
-    </span>
-  </button>
-);
+      <span
+        className="text-xs text-muted-foreground tabular-nums shrink-0"
+        title={balance.raw !== null ? `${balance.raw.toString()} base units` : undefined}
+      >
+        {balance.loading
+          ? '…'
+          : balance.formatted !== null
+            ? balance.formatted
+            : '—'}
+      </span>
+    </button>
+  );
+};
 
 const relayCurrencyToToken = (c: RelayCurrency): TokenInfo => ({
   symbol: c.symbol,
   name: c.name,
+  logoURI: c.metadata?.logoURI,
   address: c.address,
   decimals: c.decimals,
 });
@@ -142,9 +155,11 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
         >
           {selected ? (
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-semibold uppercase shrink-0">
-                {selected.symbol.slice(0, 3)}
-              </div>
+              <TokenIcon
+                symbol={selected.symbol}
+                logoURI={selected.logoURI}
+                className="w-6 h-6"
+              />
               <div className="flex flex-col min-w-0 text-left">
                 <span className="font-medium leading-tight text-foreground truncate">
                   {selected.symbol}
@@ -190,6 +205,7 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
                     <TokenRow
                       key={`f-${t.address}-${t.symbol}`}
                       token={t}
+                      chain={chain}
                       active={selected?.address === t.address}
                       onClick={() => {
                         onSelect(t);
@@ -207,6 +223,7 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
                 <TokenRow
                   key={`l-${t.address}-${t.symbol}`}
                   token={t}
+                  chain={chain}
                   active={selected?.address === t.address}
                   onClick={() => {
                     onSelect(t);
@@ -224,6 +241,7 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
                     <TokenRow
                       key={`r-${t.address}-${t.symbol}`}
                       token={t}
+                      chain={chain}
                       active={selected?.address === t.address}
                       onClick={() => {
                         onSelect(t);
