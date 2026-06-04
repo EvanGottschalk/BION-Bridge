@@ -3,9 +3,12 @@ import { BridgeCard } from '@/components/bridge/bridge-card';
 import { GridBackground } from '@/components/bridge/grid-background';
 import { StatsBar } from '@/components/bridge/stats-bar';
 import { BridgeFooter } from '@/components/bridge/footer';
-import { BRIDGE_HERO_COPY, BRIDGE_LOGO_URL } from '@/config/ui_config';
+import { BRIDGE_HERO_COPY, HERO_IMAGE_LOCATION } from '@/config/ui_config';
 
 export default function BridgePage() {
+  const heroSrc =
+    typeof HERO_IMAGE_LOCATION === 'string' ? HERO_IMAGE_LOCATION : HERO_IMAGE_LOCATION.src;
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <GridBackground />
@@ -14,7 +17,7 @@ export default function BridgePage() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 relative z-10">
         <div className="mb-6 flex flex-col items-center">
           <img
-            src={BRIDGE_LOGO_URL}
+            src={heroSrc}
             alt="AEX Bridge Logo"
             className="w-40 h-auto md:w-52 drop-shadow-[0_0_30px_rgba(74,108,247,0.3)]"
           />
