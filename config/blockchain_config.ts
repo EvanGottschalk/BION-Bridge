@@ -111,3 +111,23 @@ export const SWAP_PROVIDER_OPTIONS = {
     'Relay',
   ]
 }
+
+export const NTT_BRIDGE_INFO = { // tokens bridged via a Wormhole NTT deployment instead of Relay. Keyed by ChainKey; transfers work between any two listed chains, in both directions
+  BRDGTST: {
+    network: 'Testnet', // Wormhole network the deployment lives on; only offered while Test Mode is ON
+    chains: {
+      [CHAINS.SOLANA_DEVNET]: {
+        tokenContractAddress: '3KEy4DGbNEnMX67QNHHp3sDyXBDy9QzAnbUks8n2wxRL', // Token-2022 mint, 9 decimals
+        NTTcontractAddress: 'BRdDtfZ1obCVAwnXA3MNfFf5NR4zEoJKutqCyKjJWw7N', // NTT manager program
+        NTTtransceiverAddress: 'BRdDtfZ1obCVAwnXA3MNfFf5NR4zEoJKutqCyKjJWw7N', // Solana NTT embeds the Wormhole transceiver in the manager program
+        mode: 'locking', // hub; on-chain config mode 0, tokens held in custody 8HCmwLzh8pBJDnbbRnMGRD2Gm76K7ALUMYGMkut5mg7E
+      },
+      [CHAINS.BASE_SEPOLIA]: {
+        tokenContractAddress: '0x27f73ff4f073B4Bf98f910B52F522eDc4778eDaA', // ERC-20, 9 decimals
+        NTTcontractAddress: '0x52F00C4A1f38979dB0B729AAb4Ea0a203A499A3B', // NttManager v2.0.0
+        NTTtransceiverAddress: '0xF20e4e381E14405E1eB9DdD80cbEF9e4bf0ecFe8', // WormholeTransceiver, read from NttManager.getTransceivers()
+        mode: 'burning', // spoke; NttManager.getMode() === 1, mints on inbound and burns on outbound
+      },
+    },
+  },
+} as const;

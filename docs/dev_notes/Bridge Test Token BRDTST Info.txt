@@ -1,0 +1,11 @@
+Solana Token Address
+3KEy4DGbNEnMX67QNHHp3sDyXBDy9QzAnbUks8n2wxRL
+
+Base Token Address
+0x27f73ff4f073b4bf98f910b52f522edc4778edaa
+
+Solana NTT Manager
+BRdDtfZ1obCVAwnXA3MNfFf5NR4zEoJKutqCyKjJWw7N
+
+Base NTT Manager
+0x52F00C4A1f38979dB0B729AAb4Ea0a203A499A3B
