@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Loader2, Search } from 'lucide-react';
+import { ChevronDown, Loader2, Lock, Search } from 'lucide-react';
 import { getActiveChain, type ActiveChainKey } from '@/config/active_chains';
 import {
   getFeaturedTokens,
@@ -12,8 +12,10 @@ import {
   RELAY_TOKEN_SEARCH_DEBOUNCE_MS,
   RELAY_TOKEN_SEARCH_LIMIT,
 } from '@/config/relay_config';
-import { relayApi } from '@/lib/relay/client';
+import { getRelayApi } from '@/lib/relay/client';
 import type { RelayCurrency } from '@/lib/relay/types';
+import { isNttToken } from '@/lib/ntt/registry';
+import { NTT_TOKEN_BADGE } from '@/config/ui_config';
 import { TokenIcon } from './token-icon';
 import { useTokenBalance } from '@/hooks/use-token-balance';
 
@@ -22,7 +24,15 @@ interface TokenSelectorProps {
   chain: ActiveChainKey;
   selected: TokenInfo | null;
   onSelect: (token: TokenInfo) => void;
+  // Locked while the other side's NTT token dictates this one.
+  locked?: boolean;
 }
+
+const NttBadge = () => (
+  <span className="shrink-0 px-1.5 py-px rounded border border-primary/40 text-primary text-[9px] font-semibold tracking-wider">
+    {NTT_TOKEN_BADGE}
+  </span>
+);
 
 const TokenRow = ({
   token,
@@ -47,7 +57,10 @@ const TokenRow = ({
       <div className="flex items-center gap-3 min-w-0">
         <TokenIcon symbol={token.symbol} logoURI={token.logoURI} />
         <div className="flex flex-col min-w-0">
-          <span className="font-medium leading-tight truncate">{token.symbol}</span>
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span className="font-medium leading-tight truncate">{token.symbol}</span>
+            {isNttToken(chain, token.address) && <NttBadge />}
+          </span>
           <span className="text-xs text-muted-foreground leading-tight truncate">
             {token.name}
           </span>
@@ -75,7 +88,7 @@ const relayCurrencyToToken = (c: RelayCurrency): TokenInfo => ({
   decimals: c.decimals,
 });
 
-export function TokenSelector({ label, chain, selected, onSelect }: TokenSelectorProps) {
+export function TokenSelector({ label, chain, selected, onSelect, locked }: TokenSelectorProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [remote, setRemote] = useState<TokenInfo[]>([]);
@@ -103,10 +116,11 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
     const id = setTimeout(async () => {
       setLoading(true);
       try {
-        const results = await relayApi.searchCurrencies(
+        const meta = getActiveChain(chain);
+        const results = await getRelayApi(meta.isTestnet).searchCurrencies(
           {
             term: query,
-            chainIds: [getActiveChain(chain).relayChainId],
+            chainIds: [meta.relayChainId],
             limit: RELAY_TOKEN_SEARCH_LIMIT,
             useExternalSearch: true,
           },
@@ -150,8 +164,11 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
       <div className="relative">
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="w-full flex items-center justify-between gap-3 bg-[#0c0e1e] rounded-lg px-4 py-3 border border-white/15 hover:border-white/30 transition-all duration-200 cursor-pointer"
+          onClick={() => {
+            if (!locked) setOpen((v) => !v);
+          }}
+          disabled={locked}
+          className="w-full flex items-center justify-between gap-3 bg-[#0c0e1e] rounded-lg px-4 py-3 border border-white/15 hover:border-white/30 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:hover:border-white/15"
         >
           {selected ? (
             <div className="flex items-center gap-3 min-w-0">
@@ -161,8 +178,11 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
                 className="w-6 h-6"
               />
               <div className="flex flex-col min-w-0 text-left">
-                <span className="font-medium leading-tight text-foreground truncate">
-                  {selected.symbol}
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-medium leading-tight text-foreground truncate">
+                    {selected.symbol}
+                  </span>
+                  {isNttToken(chain, selected.address) && <NttBadge />}
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-tight truncate">
                   {selected.name}
@@ -172,14 +192,18 @@ export function TokenSelector({ label, chain, selected, onSelect }: TokenSelecto
           ) : (
             <span className="text-muted-foreground">Select token</span>
           )}
-          <ChevronDown
-            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-              open ? 'rotate-180' : ''
-            }`}
-          />
+          {locked ? (
+            <Lock className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown
+              className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                open ? 'rotate-180' : ''
+              }`}
+            />
+          )}
         </button>
 
-        {open && (
+        {open && !locked && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-[#0c0e1e] rounded-lg z-50 border border-white/15 shadow-xl shadow-black/40 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="p-3 border-b border-white/10">
               <div className="flex items-center gap-2 bg-white/5 rounded-md px-3 py-2">

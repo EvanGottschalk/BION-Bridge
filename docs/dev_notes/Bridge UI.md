@@ -1,5 +1,13 @@
 # Bridge UI
 
+> **Updated by plan 2 (NTT + Test Mode).** Some details below have changed:
+> - `BridgeCard` now uses `useBridgeQuote` and the provider-neutral `BridgeProgress`, not `useRelayQuote` / `SwapProgressUiState`.
+> - Chains come from `useActiveChains()`.
+> - The header has the Test Mode toggle.
+> - NTT tokens lock the To side.
+>
+> See `NTT Bridging and Test Mode.md`.
+
 The frontend the user sees and interacts with: the page layout, the bridge card,
 the chain and token pickers, the live quote, and the swap-progress modal. This
 file documents what is on screen, how the pieces are wired together, and where

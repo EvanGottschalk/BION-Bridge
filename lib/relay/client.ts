@@ -1,5 +1,5 @@
 import {
-  RELAY_API_BASE,
+  relayApiBase,
   RELAY_QUOTE_PATH,
   RELAY_STATUS_PATH,
   RELAY_CURRENCIES_PATH,
@@ -38,8 +38,13 @@ const ensureOk = async (res: Response): Promise<void> => {
   throw new RelayApiError(res.status, body);
 };
 
-const post = async <T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> => {
-  const res = await fetch(`${RELAY_API_BASE}${path}`, {
+const post = async <T>(
+  base: string,
+  path: string,
+  body: unknown,
+  signal?: AbortSignal
+): Promise<T> => {
+  const res = await fetch(`${base}${path}`, {
     method: 'POST',
     headers: buildHeaders(),
     body: JSON.stringify(body),
@@ -49,8 +54,8 @@ const post = async <T>(path: string, body: unknown, signal?: AbortSignal): Promi
   return (await res.json()) as T;
 };
 
-const get = async <T>(path: string, signal?: AbortSignal): Promise<T> => {
-  const res = await fetch(`${RELAY_API_BASE}${path}`, {
+const get = async <T>(base: string, path: string, signal?: AbortSignal): Promise<T> => {
+  const res = await fetch(`${base}${path}`, {
     method: 'GET',
     headers: buildHeaders(),
     signal,
@@ -59,35 +64,51 @@ const get = async <T>(path: string, signal?: AbortSignal): Promise<T> => {
   return (await res.json()) as T;
 };
 
-export const relayApi = {
-  getQuote: (req: RelayQuoteRequest, signal?: AbortSignal) =>
-    post<RelayQuoteResponse>(RELAY_QUOTE_PATH, req, signal),
+// Test Mode points every call at Relay's testnet API. Callers pick the client
+// from the chain they're working with (ActiveChain.isTestnet).
+const createRelayApi = (testnet: boolean) => {
+  const base = relayApiBase(testnet);
+  return {
+    getQuote: (req: RelayQuoteRequest, signal?: AbortSignal) =>
+      post<RelayQuoteResponse>(base, RELAY_QUOTE_PATH, req, signal),
 
-  getStatus: (requestId: string, signal?: AbortSignal) =>
-    get<RelayStatusResponse>(
-      `${RELAY_STATUS_PATH}?requestId=${encodeURIComponent(requestId)}`,
-      signal
-    ),
+    getStatus: (requestId: string, signal?: AbortSignal) =>
+      get<RelayStatusResponse>(
+        base,
+        `${RELAY_STATUS_PATH}?requestId=${encodeURIComponent(requestId)}`,
+        signal
+      ),
 
-  getChains: (signal?: AbortSignal) => get<RelayChainsResponse>(RELAY_CHAINS_PATH, signal),
+    getChains: (signal?: AbortSignal) => get<RelayChainsResponse>(base, RELAY_CHAINS_PATH, signal),
 
-  searchCurrencies: (req: RelayCurrenciesRequest, signal?: AbortSignal) =>
-    post<RelayCurrencyListResponse>(RELAY_CURRENCIES_PATH, req, signal),
+    searchCurrencies: (req: RelayCurrenciesRequest, signal?: AbortSignal) =>
+      post<RelayCurrencyListResponse>(base, RELAY_CURRENCIES_PATH, req, signal),
 
-  getAppFeeBalances: (wallet: string, signal?: AbortSignal) =>
-    get<unknown>(relayAppFeesBalancePath(wallet), signal),
+    getAppFeeBalances: (wallet: string, signal?: AbortSignal) =>
+      get<unknown>(base, relayAppFeesBalancePath(wallet), signal),
 
-  claimAppFees: (
-    wallet: string,
-    body: { chainId: number; currency: string; recipient: string; amount?: string },
-    signal?: AbortSignal
-  ) => post<unknown>(relayAppFeesClaimPath(wallet), body, signal),
+    claimAppFees: (
+      wallet: string,
+      body: { chainId: number; currency: string; recipient: string; amount?: string },
+      signal?: AbortSignal
+    ) => post<unknown>(base, relayAppFeesClaimPath(wallet), body, signal),
 
-  postPermit: (
-    endpoint: string,
-    body: { kind: string; requestId: string },
-    signal?: AbortSignal
-  ) => post<unknown>(endpoint || RELAY_EXECUTE_PERMITS_PATH, body, signal),
+    postPermit: (
+      endpoint: string,
+      body: { kind: string; requestId: string },
+      signal?: AbortSignal
+    ) => post<unknown>(base, endpoint || RELAY_EXECUTE_PERMITS_PATH, body, signal),
+  };
 };
+
+export type RelayApi = ReturnType<typeof createRelayApi>;
+
+const MAINNET_API = createRelayApi(false);
+const TESTNET_API = createRelayApi(true);
+
+export const getRelayApi = (testnet: boolean): RelayApi => (testnet ? TESTNET_API : MAINNET_API);
+
+/** Mainnet client, kept for callers that are mainnet-only (e.g. fee verification). */
+export const relayApi = MAINNET_API;
 
 export { RelayApiError };

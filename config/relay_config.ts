@@ -3,6 +3,10 @@
 // and URLs (see CLAUDE.md Non-Negotiable Rule #1).
 
 export const RELAY_API_BASE = 'https://api.relay.link';
+export const RELAY_API_BASE_TESTNET = 'https://api.testnets.relay.link'; // used while Test Mode is ON
+
+export const relayApiBase = (testnet: boolean): string =>
+  testnet ? RELAY_API_BASE_TESTNET : RELAY_API_BASE;
 export const RELAY_QUOTE_PATH = '/quote/v2';
 export const RELAY_STATUS_PATH = '/intents/status/v3';
 export const RELAY_CURRENCIES_PATH = '/currencies/v2';

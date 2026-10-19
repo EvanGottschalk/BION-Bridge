@@ -11,10 +11,22 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 import { wagmiConfig } from './evm';
 import { useSolanaEndpoint, useSolanaWallets } from './svm';
 import { RAINBOW_KIT_THEME_ACCENT } from '@/config/ui_config';
+import { NetworkModeProvider, useNetworkMode } from '@/lib/network/network-mode';
 
+// NetworkModeProvider sits outermost because the Solana endpoint depends on
+// Test Mode.
 export function WalletProviders({ children }: { children: ReactNode }) {
+  return (
+    <NetworkModeProvider>
+      <WalletStack>{children}</WalletStack>
+    </NetworkModeProvider>
+  );
+}
+
+function WalletStack({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-  const endpoint = useSolanaEndpoint();
+  const { testMode } = useNetworkMode();
+  const endpoint = useSolanaEndpoint(testMode);
   const wallets = useSolanaWallets();
 
   return (

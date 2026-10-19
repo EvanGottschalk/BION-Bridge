@@ -1,5 +1,12 @@
 # Connecting Web Wallets
 
+> **Updated by plan 2.**
+> - wagmi now registers mainnet, Base, Sepolia, and Base Sepolia.
+> - The Solana endpoint follows Test Mode.
+> - `EvmSigner` gained `waitForReceipt`, and `SvmSigner` gained `signAndSendTx`, which takes extra keypair signers with the wallet signing first.
+>
+> See `NTT Bridging and Test Mode.md`.
+
 The user has to sign transactions on two virtual machines: EVM (Ethereum,
 Base) and SVM (Solana). The app integrates *two independent wallet stacks*
 side by side, exposes a unified read-only hook for components that just need

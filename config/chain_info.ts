@@ -103,7 +103,8 @@ export const SOLANA_DEVNET = {
   rpcUrls: [
     'https://api.devnet.solana.com/', // Solana devnet RPC for wallet, balances, and swap routes
   ],
-  explorerUrl: 'https://solscan.io/?cluster=devnet', // block explorer base URL for Solana devnet transactions
+  explorerUrl: 'https://solscan.io', // block explorer base URL for Solana devnet transactions
+  explorerQuery: '?cluster=devnet', // appended after the tx/account path so Solscan shows devnet data
 };
 
 export const RELAY_CHAIN_INFO: Record<string, { chainId: number; explorerUrl?: string; rpcUrls: string[] }> = {

@@ -51,7 +51,7 @@
   - **EVM:** call `NttManagerWithExecutor.transfer(nttManager, amount, recipientChain, recipientAddress, refundAddress, shouldQueue, encodedInstructions, ExecutorArgs{value, refundAddress, signedQuote, instructions}, FeeArgs{dbps, payee})`.
   - **Solana:** call `ntt.transfer(...)`, then append the `relay_ntt_message` instruction from the `example-ntt-with-executor` program in the same v0 transaction.
 - Executor API (testnet): `https://executor-testnet.labsapis.com`, with `GET /v0/capabilities`, `POST /v0/quote`, and `POST /v0/status/tx`.
-- `FeeArgs.dbps` (tenths of a basis point) plus a `payee` let **us take a referrer fee** on NTT transfers. This replaces Relay app fees on NTT routes (see §7).
+- `FeeArgs` plus a `payee` let **us take a referrer fee** on NTT transfers. The docs describe `dbps`; SDK 8.0.1 actually sends an absolute `transferTokenFee` (see the §7 correction). This replaces Relay app fees on NTT routes (see §7).
 - If the Executor fails, the user can still redeem **manually** on the destination chain. The SDK exposes `route.complete(signer, receipt)` for this.
 
 ### 2.4 The TypeScript SDK path
@@ -245,13 +245,17 @@ On EVM we could call `NttManagerWithExecutor.transfer` with viem and hit the Exe
 - Relay app fees (`RELAY_APP_FEE_BPS`, `RELAY_FEE_RECIPIENT`) do **not** apply to NTT.
 - The Executor relay fee is paid by the user in source-chain native gas. It is real money and must appear in the quote.
 - **Our fee on NTT (decision: 0.5%, the same as Relay):**
-  - The executor route's `getFee` callback returns `transferTokenFee = amount × 0.5%` and the `referrerAddress` for the source chain. On EVM this becomes `FeeArgs{dbps: 5000, payee}`.
-  - The fee is derived from `UNIVERSAL_FEES.ALL`, not hard-coded. Add `NTT_REFERRER_FEE_DBPS = UNIVERSAL_FEES.ALL * 10_000` to `config/ntt_config.ts`, so 0.5 → 5000 dbps.
+  - The executor route's `getFee` callback returns `transferTokenFee = amount × 0.5%` and the `referrerAddress` for the source chain.
+  - **Correction (found while implementing):**
+    - SDK `8.0.1` passes an **absolute** `transferTokenFee`, in token base units, to `FeeArgs{transferTokenFee, nativeTokenFee, payee}`. It does not use dbps.
+    - The earlier "5000 dbps" figure was also wrong: 0.5% is 500 dbps, and 5000 dbps would be 5%.
+  - The fee is derived from `UNIVERSAL_FEES.ALL`, not hard-coded: `NTT_REFERRER_FEE_BPS = UNIVERSAL_FEES.ALL * 100` (0.5 → 50 bps) in `config/ntt_config.ts`. The code computes `amount × 50 / 10_000`.
   - The payee is `FEE_RECIPIENT_ADDRESSES[sourceChainKey]` (`BASE_SEPOLIA` / `SOLANA_DEVNET` now, the mainnet keys later).
   - The fee is taken in the bridged token on the source chain, so the recipient gets `amount − fee`, trimmed to 8 decimals.
-- The spike (Phase 0) must confirm two things on the Solana path:
-  - how the fee is collected there (the docs only mention the `payee` read from the signed quote);
-  - whether `FEE_RECIPIENT_ADDRESSES.SOLANA_DEVNET` needs a BRDGTST token account to exist (Token-2022 ATA) before it can receive the fee.
+- **Solana path (confirmed from the SDK source):**
+  - The SDK appends a Token-2022 `transferChecked` of the fee to the referrer's ATA.
+  - If that ATA doesn't exist, the SDK first creates it with `createAssociatedTokenAccountIdempotent`, and the **sender pays its rent once**.
+  - No setup is needed on our side.
 
 ---
 
@@ -303,14 +307,51 @@ Prerequisites: devnet SOL, Base Sepolia ETH, and BRDGTST in a Phantom devnet wal
 | # | Question | Decision | Where applied |
 |---|---|---|---|
 | 1 | How to switch mainnet/testnet | **In-app "Test Mode" toggle** whose label reads `ON` / `OFF`. **It ships on production.** It is shown or hidden by `TEST_MODE_TOGGLE_VISIBLE = true` in `config/ui_config.ts` | §4.1, §4.5 |
-| 2 | Referrer fee on NTT routes | **0.5%, the same as Relay** (`UNIVERSAL_FEES.ALL` → 5000 dbps, paid to `FEE_RECIPIENT_ADDRESSES[source]`) | §7 |
+| 2 | Referrer fee on NTT routes | **0.5%, the same as Relay** (`UNIVERSAL_FEES.ALL` → 50 bps, as an absolute `transferTokenFee`, paid to `FEE_RECIPIENT_ADDRESSES[source]`) | §7 |
 | 3 | `NTT_BRIDGE_INFO` shape | **Chain-keyed `chains: {}` map plus `network`.** Already applied in `config/blockchain_config.ts` | §5.2 |
 | 4 | Relay while Test Mode is ON | **Use Relay testnets** (`api.testnets.relay.link`) | §4.4 |
 | 5 | Destination gas drop-off | **Dropped.** Too confusing for users, so it is not built (see Non-Goals) | §1 |
 | 7 | Relay chain id for Solana Devnet | **901**, the existing `SOLANA_DEVNET.chainId` in `config/chain_info.ts` | §4.4 |
 | 6 | BRDGTST display name | **"Bridge Test 48"**, matching on-chain metadata. Already applied in both `token_info` files. The symbol is `BRDGTST`; "BRDTST" in the info file's name is a typo | §3 |
 
-No open decisions remain. The only items left to confirm are the Solana-side fee checks in §7, which happen in the Phase 0 spike.
+No open decisions remain.
+
+---
+
+## 11. Implementation status (2026-10-18)
+
+All phases are implemented, `tsc` is clean, and `next build` succeeds.
+
+### Phase 0 spike results
+The spike was a read-only `validate` + `quote` against testnet, with no funds moved.
+
+| | Solana Devnet → Base Sepolia | Base Sepolia → Solana Devnet |
+|---|---|---|
+| 0.5% fee | 1.12345678 in → 1.1178395 out ✓ | 0.5 in → 0.4975 out ✓ |
+| Executor relay fee | 0.000166 SOL | 0.000489 ETH |
+| ETA | ~18 s | ~17 min |
+| Capacity | outbound 100 / inbound 1000 ✓ | **Solana inbound limit from Base Sepolia = 0** ⚠️ |
+
+**Action needed on the deployment:** Solana's inbound rate limit for chain 10004 is 0. Every Base → Solana transfer would sit in the destination queue for 24 h. The UI blocks these with "Exceeds bridge capacity (0 BRDGTST available)" until the limit is raised (`ntt` CLI, then `ntt push`).
+
+### Findings that shaped the code
+- `@wormhole-foundation/sdk-*` peers are pinned to exactly `6.1.4`, and the NTT packages are `8.0.1`.
+- `sdk-evm-ntt` and `sdk-solana-ntt` must be registered explicitly with `register()`.
+- `route.track()` is a **single pass**, so the provider polls it until delivery.
+- A relay failure is *not* terminal: the VAA can still be redeemed manually. The UI therefore shows "Redeem manually" instead of a failure.
+- `sdk-solana` bundles its own `@solana/web3.js`, so the Solana signer uses structural checks, not `instanceof`.
+- The extensionless `import "./side-effects"` in `sdk-solana-ntt` breaks raw Node ESM but is fine under Next's bundler. `transpilePackages` was not needed.
+- The SDK is code-split into its own ~2.3 MB chunk and is downloaded only when an NTT route is quoted.
+
+### Deviations from the plan
+- **Toggle placement:** the "Live"/"Testnet" badge stays next to the title. The Test Mode switch with its ON/OFF label sits on the right of the header, before "Operational", and wraps under the title on narrow screens.
+- **Inherited bug fixed:** the 20 s Relay quote auto-refresh never re-fetched, because the timer reset the cache key but nothing re-ran the effect, so the button stuck on "Fetching quote…". `useBridgeQuote` now bumps a refresh tick.
+- **Closing the progress modal mid-flight now keeps the card locked.** Clicking the "Bridging…" button reopens the modal. Before, closing the modal unlocked the card mid-transfer.
+- `hooks/use-relay-quote.ts` is no longer imported anywhere. It was left in place and can be deleted.
+
+### Not yet verified
+- No real transfer was signed. A live wallet run of §9 (tests 1–7 and 11) is still needed, using a Phantom devnet wallet and a Base Sepolia EVM wallet.
+- Relay testnet quotes, including Solana Devnet as chain 901, have not been exercised.
 
 ---
 

@@ -1,104 +1,80 @@
 'use client';
 
 import { CheckCircle2, XCircle, Loader2, ExternalLink, X } from 'lucide-react';
-import type { RelayStatus, RelayStatusResponse } from '@/lib/relay/types';
-import { STATUS_COPY } from '@/config/ui_config';
-import {
-  buildExplorerTxUrl,
-  getActiveChainByRelayId,
-  type ActiveChainKey,
-} from '@/config/active_chains';
+import type { BridgeLink, BridgeProgress } from '@/lib/bridge/types';
+import { STATUS_COPY, SWAP_PROGRESS_COPY } from '@/config/ui_config';
 
-export type SwapProgressUiState =
-  | { kind: 'awaiting' }
-  | { kind: 'executing'; label: string }
-  | { kind: 'polling'; status: RelayStatusResponse }
-  | { kind: 'success'; status: RelayStatusResponse }
-  | { kind: 'failure'; message: string; status?: RelayStatusResponse }
-  | { kind: 'refunded'; status: RelayStatusResponse };
+const STAGE_COUNT = 4;
 
-const STAGE_ORDER: RelayStatus[] = ['waiting', 'pending', 'submitted', 'success'];
-
-const stageIndex = (s?: RelayStatus): number => {
-  if (!s) return 0;
-  const i = STAGE_ORDER.indexOf(s);
-  return i === -1 ? 0 : i;
-};
-
-const renderStatusLabel = (s?: RelayStatus): { title: string; body: string } => {
-  if (!s) return STATUS_COPY.awaiting;
-  return STATUS_COPY[s] ?? STATUS_COPY.awaiting;
-};
-
-const renderExplorerLink = (
-  hash: string | undefined,
-  chainKey: ActiveChainKey | undefined,
-  label: string
-) => {
-  if (!hash || !chainKey) return null;
-  return (
-    <a
-      href={buildExplorerTxUrl(chainKey, hash)}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-    >
-      {label}
-      <ExternalLink className="w-3 h-3" />
-    </a>
-  );
-};
+const renderLink = (link: BridgeLink) => (
+  <a
+    key={link.href}
+    href={link.href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+  >
+    {link.label}
+    <ExternalLink className="w-3 h-3" />
+  </a>
+);
 
 export function SwapProgress({
   open,
   state,
   onClose,
+  onRedeem,
+  redeeming,
+  redeemError,
 }: {
   open: boolean;
-  state: SwapProgressUiState;
+  state: BridgeProgress;
   onClose: () => void;
+  onRedeem?: () => void;
+  redeeming?: boolean;
+  redeemError?: string;
 }) {
   if (!open) return null;
 
-  let status: RelayStatus | undefined;
-  let executingLabel: string | undefined;
+  let copy = STATUS_COPY.awaiting;
+  let stage = 0;
+  let links: BridgeLink[] = [];
+  let note: string | undefined;
   let errorMessage: string | undefined;
-  let statusResp: RelayStatusResponse | undefined;
+  let canRedeem = false;
 
   switch (state.kind) {
     case 'awaiting':
       break;
     case 'executing':
-      executingLabel = state.label;
+      copy = { title: SWAP_PROGRESS_COPY.submittingTitle, body: state.label };
       break;
-    case 'polling':
-      status = state.status.status;
-      statusResp = state.status;
+    case 'tracking':
+      copy = state.copy;
+      stage = state.stage;
+      links = state.links;
+      note = state.note;
+      canRedeem = Boolean(state.canRedeem);
       break;
     case 'success':
-      status = 'success';
-      statusResp = state.status;
-      break;
-    case 'failure':
-      status = 'failure';
-      errorMessage = state.message;
-      statusResp = state.status;
+      copy = state.copy;
+      stage = STAGE_COUNT - 1;
+      links = state.links;
       break;
     case 'refunded':
-      status = 'refunded';
-      statusResp = state.status;
+      copy = state.copy;
+      links = state.links;
+      break;
+    case 'failure':
+      copy = state.copy;
+      links = state.links;
+      errorMessage = state.message;
+      canRedeem = Boolean(state.canRedeem);
       break;
   }
 
-  const copy = executingLabel
-    ? { title: 'Submitting', body: executingLabel }
-    : renderStatusLabel(status);
-
-  const idx = stageIndex(status);
   const isTerminal =
     state.kind === 'success' || state.kind === 'failure' || state.kind === 'refunded';
-  const originChain = getActiveChainByRelayId(statusResp?.originChainId ?? 0);
-  const destChain = getActiveChainByRelayId(statusResp?.destinationChainId ?? 0);
 
   return (
     <div
@@ -115,7 +91,7 @@ export function SwapProgress({
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          aria-label="Close"
+          aria-label={SWAP_PROGRESS_COPY.close}
         >
           <X className="w-4 h-4" />
         </button>
@@ -126,42 +102,60 @@ export function SwapProgress({
           {state.kind === 'refunded' && <XCircle className="w-12 h-12 text-amber-400" />}
           {(state.kind === 'awaiting' ||
             state.kind === 'executing' ||
-            state.kind === 'polling') && (
+            state.kind === 'tracking') && (
             <Loader2 className="w-12 h-12 text-primary animate-spin" />
           )}
 
           <div className="text-center space-y-1">
             <h3 className="text-foreground text-lg font-semibold">{copy.title}</h3>
             <p className="text-muted-foreground text-sm">{copy.body}</p>
-            {errorMessage && <p className="text-red-300 text-xs mt-2">{errorMessage}</p>}
+            {errorMessage && <p className="text-red-300 text-xs mt-2 break-words">{errorMessage}</p>}
           </div>
 
           <div className="w-full mt-2 flex items-center gap-2">
-            {STAGE_ORDER.map((s, i) => (
+            {Array.from({ length: STAGE_COUNT }, (_, i) => (
               <div
-                key={s}
+                key={i}
                 className={`flex-1 h-1.5 rounded-full transition-colors ${
-                  i <= idx ? 'bg-primary' : 'bg-white/10'
+                  state.kind !== 'awaiting' && state.kind !== 'executing' && i <= stage
+                    ? 'bg-primary'
+                    : 'bg-white/10'
                 }`}
-                title={s}
               />
             ))}
           </div>
 
-          <div className="w-full text-xs text-muted-foreground flex flex-col gap-1 mt-1">
-            {statusResp?.inTxHashes?.[0] &&
-              renderExplorerLink(
-                statusResp.inTxHashes[0],
-                originChain?.key,
-                'Origin transaction'
+          {links.length > 0 && (
+            <div className="w-full text-xs text-muted-foreground flex flex-col gap-1 mt-1">
+              {links.map(renderLink)}
+            </div>
+          )}
+
+          {note && !isTerminal && (
+            <p className="w-full text-[11px] text-muted-foreground/80 text-center">{note}</p>
+          )}
+
+          {canRedeem && onRedeem && (
+            <button
+              type="button"
+              onClick={onRedeem}
+              disabled={redeeming}
+              className="w-full mt-1 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border border-primary/40 text-primary hover:border-primary"
+            >
+              {redeeming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {SWAP_PROGRESS_COPY.redeeming}
+                </span>
+              ) : (
+                SWAP_PROGRESS_COPY.redeem
               )}
-            {statusResp?.txHashes?.[0] &&
-              renderExplorerLink(
-                statusResp.txHashes[0],
-                destChain?.key,
-                'Destination transaction'
-              )}
-          </div>
+            </button>
+          )}
+
+          {redeemError && (
+            <p className="w-full text-red-300 text-xs text-center break-words">{redeemError}</p>
+          )}
 
           {isTerminal && (
             <button
@@ -169,7 +163,7 @@ export function SwapProgress({
               onClick={onClose}
               className="w-full mt-3 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 cursor-pointer glass-button text-white"
             >
-              Done
+              {SWAP_PROGRESS_COPY.done}
             </button>
           )}
         </div>

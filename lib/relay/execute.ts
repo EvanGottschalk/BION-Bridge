@@ -4,8 +4,19 @@ import type {
   RelayTransactionData,
   RelaySignatureData,
 } from './types';
+import type { Keypair, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { isEvmChainId, isSolanaChainId } from '@/config/active_chains';
-import { relayApi } from './client';
+import { getRelayApi } from './client';
+
+// Error.name used by signers when the chain itself rejected a tx (reverted /
+// failed), as opposed to a wallet or RPC error after broadcast.
+export const TX_FAILED_ON_CHAIN = 'TxFailedOnChain';
+
+export const txFailedOnChain = (message: string): Error => {
+  const err = new Error(message);
+  err.name = TX_FAILED_ON_CHAIN;
+  return err;
+};
 
 export type EvmTxRequest = {
   chainId: number;
@@ -27,11 +38,22 @@ export type EvmSigner = {
   switchChain: (chainId: number) => Promise<void>;
   sendTransaction: (req: EvmTxRequest) => Promise<`0x${string}`>;
   signTypedData: (req: EvmTypedDataRequest) => Promise<`0x${string}`>;
+  // Resolves once the tx is mined; throws if it reverted. Used by flows whose
+  // later txs depend on earlier ones (e.g. NTT approve → transfer).
+  waitForReceipt: (chainId: number, hash: `0x${string}`) => Promise<void>;
 };
 
 export type SvmSigner = {
   sendBase64Tx: (base64Tx: string) => Promise<string>;
   sendRawInstructions?: (instructions: unknown) => Promise<string>;
+  // Signs a prebuilt tx with the wallet plus any SDK-provided keypairs (e.g.
+  // the NTT outbox account), broadcasts it, and waits for confirmation.
+  // `onSent` fires right after broadcast, before confirmation.
+  signAndSendTx: (
+    tx: Transaction | VersionedTransaction,
+    extraSigners: Keypair[],
+    onSent?: (signature: string) => void
+  ) => Promise<string>;
 };
 
 export type ExecuteProgress =
@@ -130,6 +152,7 @@ export type ExecuteOptions = {
   destinationChainId?: number;
   onProgress?: (p: ExecuteProgress) => void;
   signal?: AbortSignal;
+  testnet?: boolean; // post permits to Relay's testnet API (Test Mode)
 };
 
 export const executeSteps = async (
@@ -271,7 +294,7 @@ async function runSigItem(
   opts.onProgress?.({ kind: 'sig-sent', step, itemIndex, signature });
 
   if (data.post && data.post.endpoint) {
-    await relayApi.postPermit(data.post.endpoint, {
+    await getRelayApi(opts.testnet ?? false).postPermit(data.post.endpoint, {
       kind: 'request',
       requestId: step.requestId,
     });

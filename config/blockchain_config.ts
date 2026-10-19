@@ -12,6 +12,12 @@ export const CHAINS = {
 
 export type ChainKey = keyof typeof CHAINS; // union of supported chain identifiers for backend logic
 
+export const TEST_MODE_DEFAULT = false; // Test Mode starts OFF (mainnet chains) unless the viewer previously turned it ON
+export const TEST_MODE_STORAGE_KEY = 'aphid.testMode'; // localStorage key remembering the viewer's last Test Mode choice
+
+export const SOLANA_CONFIRM_POLL_INTERVAL_MS = 2_000; // HTTP polling interval when confirming wallet-signed Solana txs
+export const SOLANA_CONFIRM_TIMEOUT_MS = 90_000; // give up waiting (without failing) after this long
+
 export const GAS_RESERVES = {
   BASE_SEPOLIA: '0.001',
   ETH_SEPOLIA: '0.001',
@@ -112,7 +118,19 @@ export const SWAP_PROVIDER_OPTIONS = {
   ]
 }
 
-export const NTT_BRIDGE_INFO = { // tokens bridged via a Wormhole NTT deployment instead of Relay. Keyed by ChainKey; transfers work between any two listed chains, in both directions
+export type NttChainDeployment = {
+  tokenContractAddress: string;
+  NTTcontractAddress: string;
+  NTTtransceiverAddress: string;
+  mode: 'locking' | 'burning';
+};
+
+export type NttDeployment = {
+  network: 'Mainnet' | 'Testnet';
+  chains: Partial<Record<ChainKey, NttChainDeployment>>;
+};
+
+export const NTT_BRIDGE_INFO: Record<string, NttDeployment> = { // tokens bridged via a Wormhole NTT deployment instead of Relay. Keyed by token symbol, then ChainKey; transfers work between any two listed chains, in both directions
   BRDGTST: {
     network: 'Testnet', // Wormhole network the deployment lives on; only offered while Test Mode is ON
     chains: {
@@ -130,4 +148,4 @@ export const NTT_BRIDGE_INFO = { // tokens bridged via a Wormhole NTT deployment
       },
     },
   },
-} as const;
+};

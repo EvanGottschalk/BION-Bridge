@@ -3,7 +3,7 @@ import {
   RELAY_STATUS_POLL_TIMEOUT_MS,
   RELAY_TERMINAL_STATUSES,
 } from '@/config/relay_config';
-import { relayApi } from './client';
+import { getRelayApi } from './client';
 import type { RelayStatus, RelayStatusResponse } from './types';
 
 export const isTerminalStatus = (s: RelayStatus): boolean =>
@@ -16,6 +16,7 @@ export type PollStatusOptions = {
   intervalMs?: number;
   timeoutMs?: number;
   signal?: AbortSignal;
+  testnet?: boolean; // poll Relay's testnet API (Test Mode)
 };
 
 export const pollStatus = async (
@@ -25,11 +26,12 @@ export const pollStatus = async (
   const interval = opts.intervalMs ?? RELAY_STATUS_POLL_INTERVAL_MS;
   const timeout = opts.timeoutMs ?? RELAY_STATUS_POLL_TIMEOUT_MS;
   const start = Date.now();
+  const api = getRelayApi(opts.testnet ?? false);
 
   while (Date.now() - start < timeout) {
     if (opts.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     try {
-      const res = await relayApi.getStatus(requestId, opts.signal);
+      const res = await api.getStatus(requestId, opts.signal);
       opts.onUpdate?.(res);
       if (isTerminalStatus(res.status)) return res;
     } catch (err) {

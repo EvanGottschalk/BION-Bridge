@@ -1,5 +1,11 @@
 # Cross-chain Swaps and Bridging
 
+> **Updated by plan 2.** Relay is now one of two providers behind `lib/bridge/`.
+> - Tokens listed in `NTT_BRIDGE_INFO` bridge through Wormhole NTT instead.
+> - Relay calls go through `getRelayApi(testnet)` so Test Mode uses Relay's testnet API.
+>
+> See `NTT Bridging and Test Mode.md`.
+
 How a cross-chain swap actually happens once the user clicks the Swap button.
 This file documents the bridging *backend* — the protocol, the API calls, the
 step execution, the status poller, and the fee/verification machinery. The UI

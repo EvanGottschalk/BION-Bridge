@@ -5,13 +5,16 @@ import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
-import { resolveRpcUrls, SOLANA_MAINNET } from '@/config/chain_info';
+import { resolveRpcUrls, SOLANA_MAINNET, SOLANA_DEVNET } from '@/config/chain_info';
 
-export const useSolanaEndpoint = (): string => {
+// Test Mode swaps the Connection to devnet. The wallet adapter stays connected
+// across the switch; we broadcast through this connection ourselves.
+export const useSolanaEndpoint = (testMode: boolean): string => {
   return useMemo(() => {
-    const resolved = resolveRpcUrls(SOLANA_MAINNET.rpcUrls);
-    return resolved[0] ?? 'https://api.mainnet-beta.solana.com/';
-  }, []);
+    const chain = testMode ? SOLANA_DEVNET : SOLANA_MAINNET;
+    const resolved = resolveRpcUrls(chain.rpcUrls);
+    return resolved[0] ?? chain.rpcUrls[chain.rpcUrls.length - 1];
+  }, [testMode]);
 };
 
 export const useSolanaWallets = () =>

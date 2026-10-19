@@ -1,17 +1,15 @@
 'use client';
 
-import { Clock, Zap, Shield, Loader2 } from 'lucide-react';
-import type { QuoteState } from '@/hooks/use-relay-quote';
-import { QUOTE_DEFAULT_ETA_LABEL, QUOTE_FEE_LABEL_BPS_FALLBACK } from '@/config/ui_config';
+import { Clock, Zap, Shield, Loader2, AlertTriangle } from 'lucide-react';
+import type { BridgeProviderId, BridgeQuoteState } from '@/lib/bridge/types';
+import {
+  BRIDGE_PROVIDER_COPY,
+  BRIDGE_BUTTON_COPY,
+  QUOTE_DEFAULT_ETA_LABEL,
+  QUOTE_FEE_LABEL_BPS_FALLBACK,
+} from '@/config/ui_config';
 import { RELAY_APP_FEE_BPS } from '@/config/relay_config';
-
-const fmtUsd = (v?: string): string | undefined => {
-  if (v === undefined || v === null || v === '') return undefined;
-  const n = Number(v);
-  if (Number.isNaN(n)) return undefined;
-  if (n < 0.01) return '<$0.01';
-  return `$${n.toFixed(2)}`;
-};
+import { NTT_REFERRER_FEE_BPS } from '@/config/ntt_config';
 
 const fmtEta = (seconds?: number): string => {
   if (!seconds || seconds <= 0) return QUOTE_DEFAULT_ETA_LABEL;
@@ -20,13 +18,21 @@ const fmtEta = (seconds?: number): string => {
   return `~${mins} min`;
 };
 
-const feeLabel = (): string => {
-  const pct = RELAY_APP_FEE_BPS / 100;
+// Shown before the first quote arrives; afterwards the quote's own label wins.
+const defaultFeeLabel = (provider: BridgeProviderId): string => {
+  const bps = provider === 'ntt' ? NTT_REFERRER_FEE_BPS : RELAY_APP_FEE_BPS;
+  const pct = bps / 100;
   if (!Number.isFinite(pct)) return QUOTE_FEE_LABEL_BPS_FALLBACK;
   return `${pct}% fee`;
 };
 
-export function QuoteSummary({ state }: { state: QuoteState }) {
+export function QuoteSummary({
+  state,
+  providerId,
+}: {
+  state: BridgeQuoteState;
+  providerId: BridgeProviderId;
+}) {
   const quote =
     state.kind === 'ready'
       ? state.quote
@@ -38,11 +44,11 @@ export function QuoteSummary({ state }: { state: QuoteState }) {
 
   return (
     <div className="mt-4 space-y-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-1">
             <Zap className="w-3 h-3 text-primary" />
-            <span className="font-medium">{feeLabel()}</span>
+            <span className="font-medium">{quote?.feeLabel ?? defaultFeeLabel(providerId)}</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3 text-primary" />
@@ -51,79 +57,38 @@ export function QuoteSummary({ state }: { state: QuoteState }) {
         </div>
         <div className="flex items-center gap-1">
           <Shield className="w-3 h-3 text-primary" />
-          <span className="font-medium">Secured by Relay</span>
+          <span className="font-medium">{BRIDGE_PROVIDER_COPY[providerId].securedBy}</span>
         </div>
       </div>
 
       {state.kind === 'loading' && !quote && (
         <div className="glass-inner rounded-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
           <Loader2 className="w-3 h-3 animate-spin" />
-          Fetching quote…
+          {BRIDGE_BUTTON_COPY.fetchingQuote}
         </div>
       )}
 
       {state.kind === 'error' && (
-        <div className="rounded-lg px-3 py-2 text-xs text-red-300 border border-red-400/30 bg-red-500/5">
+        <div className="rounded-lg px-3 py-2 text-xs text-red-300 border border-red-400/30 bg-red-500/5 break-words">
           {state.message}
         </div>
       )}
 
-      {quote && (
+      {quote?.warning && state.kind !== 'error' && (
+        <div className="rounded-lg px-3 py-2 text-xs text-amber-200 border border-amber-400/30 bg-amber-500/5 flex items-start gap-2">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          <span>{quote.warning}</span>
+        </div>
+      )}
+
+      {quote && quote.rows.length > 0 && (
         <div className="glass-inner rounded-lg px-3 py-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
-          {quote.rate && (
-            <>
-              <span className="text-muted-foreground">Rate</span>
-              <span className="text-right text-foreground tabular-nums">{quote.rate}</span>
-            </>
-          )}
-          {fmtUsd(quote.outputAmountUsd) && (
-            <>
-              <span className="text-muted-foreground">Output value</span>
-              <span className="text-right text-foreground tabular-nums">
-                {fmtUsd(quote.outputAmountUsd)}
-              </span>
-            </>
-          )}
-          {fmtUsd(quote.feeBreakdownUsd.gas) && (
-            <>
-              <span className="text-muted-foreground">Gas</span>
-              <span className="text-right text-foreground tabular-nums">
-                {fmtUsd(quote.feeBreakdownUsd.gas)}
-              </span>
-            </>
-          )}
-          {fmtUsd(quote.feeBreakdownUsd.relayerService) && (
-            <>
-              <span className="text-muted-foreground">Relayer fee</span>
-              <span className="text-right text-foreground tabular-nums">
-                {fmtUsd(quote.feeBreakdownUsd.relayerService)}
-              </span>
-            </>
-          )}
-          {fmtUsd(quote.feeBreakdownUsd.app) && (
-            <>
-              <span className="text-muted-foreground">App fee</span>
-              <span className="text-right text-foreground tabular-nums">
-                {fmtUsd(quote.feeBreakdownUsd.app)}
-              </span>
-            </>
-          )}
-          {quote.feeBreakdownUsd.totalImpactPercent && (
-            <>
-              <span className="text-muted-foreground">Price impact</span>
-              <span className="text-right text-foreground tabular-nums">
-                {quote.feeBreakdownUsd.totalImpactPercent}%
-              </span>
-            </>
-          )}
-          {quote.slippagePercent && (
-            <>
-              <span className="text-muted-foreground">Slippage</span>
-              <span className="text-right text-foreground tabular-nums">
-                {quote.slippagePercent}%
-              </span>
-            </>
-          )}
+          {quote.rows.map((row) => (
+            <div key={row.label} className="contents">
+              <span className="text-muted-foreground">{row.label}</span>
+              <span className="text-right text-foreground tabular-nums break-all">{row.value}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

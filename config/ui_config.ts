@@ -99,6 +99,147 @@ export const STATUS_COPY: Record<string, { title: string; body: string }> = {
   refund: { title: 'Refund in progress', body: 'A refund is being issued.' },
 };
 
+// Test Mode toggle in the bridge card header. Set TEST_MODE_TOGGLE_VISIBLE to
+// false to hide it; the app then always runs with Test Mode OFF (mainnet).
+export const TEST_MODE_TOGGLE_VISIBLE = true;
+export const TEST_MODE_COPY = {
+  label: 'Test Mode',
+  on: 'ON',
+  off: 'OFF',
+  liveBadge: 'Live',
+  testnetBadge: 'Testnet',
+  operational: 'Operational',
+  phantomHint: 'Using Phantom? Turn on Testnet Mode in its settings to see devnet balances.',
+} as const;
+
+export const BRIDGE_CARD_COPY = {
+  title: 'Bridge',
+  fromLabel: 'From',
+  toLabel: 'To',
+  tokenLabel: 'Token',
+  amountLabel: 'Amount',
+  receiveLabel: 'You Receive',
+  amountPlaceholder: '0.00',
+  swapSidesAria: 'Swap chains',
+  bridging: 'Bridging…',
+} as const;
+
+export const BRIDGE_BUTTON_COPY = {
+  connectSolana: 'Connect Solana wallet',
+  connectEvm: 'Connect EVM wallet',
+  selectTokens: 'Select tokens',
+  enterAmount: 'Enter amount',
+  insufficientBalance: 'Insufficient balance',
+  fetchingQuote: 'Fetching quote…',
+  quoteFailed: 'Quote failed',
+  awaitingQuote: 'Awaiting quote',
+  exceedsCapacity: 'Exceeds bridge capacity',
+  insufficientGas: 'Insufficient gas for relay fee',
+  swap: (from: string, to: string) => `Swap ${from} → ${to}`,
+  bridge: (symbol: string) => `Bridge ${symbol}`,
+} as const;
+
+export const BRIDGE_PROVIDER_COPY = {
+  relay: { securedBy: 'Secured by Relay' },
+  ntt: { securedBy: 'Secured by Wormhole NTT' },
+} as const;
+
+// Badge shown next to tokens that bridge via a Wormhole NTT deployment.
+export const NTT_TOKEN_BADGE = 'NTT';
+
+export const QUOTE_ROW_LABELS = {
+  rate: 'Rate',
+  outputValue: 'Output value',
+  gas: 'Gas',
+  relayerFee: 'Relayer fee',
+  appFee: 'App fee',
+  priceImpact: 'Price impact',
+  slippage: 'Slippage',
+  relayFee: 'Relay fee',
+  bridgeFee: 'Bridge fee',
+  delivery: 'Delivery',
+} as const;
+
+export const NTT_QUOTE_COPY = {
+  delivery: 'Automatic (Wormhole Executor)',
+  capacityError: (available: string, symbol: string) =>
+    `Exceeds bridge capacity (${available} ${symbol} available right now).`,
+  capacityWarning: 'This amount is close to the destination rate limit and may be delayed.',
+  notNttRoute: 'This token pair is not an NTT route.',
+  quoteExpired: 'The relay quote expired. Please try again.',
+  recipientRequired: 'Connect a destination wallet to receive the tokens.',
+  walletRequired: (vm: 'evm' | 'svm') =>
+    vm === 'svm' ? 'Connect a Solana wallet to continue.' : 'Connect an EVM wallet to continue.',
+} as const;
+
+export const SWAP_PROGRESS_COPY = {
+  submittingTitle: 'Submitting',
+  confirmInWallet: 'Confirm the transactions in your wallet.',
+  txBroadcast: 'Transaction broadcast. Waiting for solver…',
+  sigSubmitted: 'Signature submitted.',
+  originTx: 'Origin transaction',
+  destinationTx: 'Destination transaction',
+  wormholescan: 'View on Wormholescan',
+  done: 'Done',
+  close: 'Close',
+  redeem: 'Redeem manually',
+  redeeming: 'Redeeming…',
+  noRequestId: 'Could not find a requestId to poll.',
+  swapFailed: 'Swap failed',
+  unknownError: 'Unknown error',
+} as const;
+
+// Destination-side "Redeem" panel for NTT transfers that were sent but never
+// delivered automatically.
+export const NTT_REDEEM_COPY = {
+  toggle: 'Redeem a sent transfer',
+  explainer: (fromChain: string, toChain: string) =>
+    `Sent tokens from ${fromChain} but they never arrived on ${toChain}? Paste the ${fromChain} transaction hash and redeem them here.`,
+  inputLabel: 'Source transaction hash',
+  inputPlaceholder: 'Transaction hash',
+  redeem: 'Redeem',
+  connectWallet: (vm: 'evm' | 'svm') =>
+    vm === 'svm' ? 'Connect Solana wallet to redeem' : 'Connect EVM wallet to redeem',
+  payerNote: (toChain: string) =>
+    `Your connected wallet pays the ${toChain} gas. Tokens go to the recipient set when the transfer was sent.`,
+  lookingUp: 'Looking up your transfer on Wormhole…',
+  notSignedYet:
+    'Wormhole Guardians have not signed this transfer yet. Wait for the source chain to finalize, then try again.',
+  wrongRoute: 'That transaction is not a transfer to this destination chain.',
+} as const;
+
+// Status copy for NTT transfers, keyed to Wormhole TransferState milestones.
+export const NTT_STATUS_COPY = {
+  sourceInitiated: {
+    title: 'Transfer submitted',
+    body: 'Waiting for the source chain to finalize your transfer.',
+  },
+  attested: {
+    title: 'Signed by Wormhole Guardians',
+    body: 'The relayer is delivering your tokens to the destination chain.',
+  },
+  destinationInitiated: {
+    title: 'Delivering',
+    body: 'Waiting for confirmation on the destination chain.',
+  },
+  destinationQueued: {
+    title: 'Queued by rate limit',
+    body: 'The destination rate limit queued this transfer. It can be finalized after the release time.',
+  },
+  success: { title: 'Complete', body: 'Your tokens have arrived.' },
+  relayFailed: {
+    title: 'Automatic delivery failed',
+    body: 'Your tokens are safe. Redeem manually on the destination chain to finish the transfer.',
+  },
+  stalled: {
+    title: 'Taking longer than usual',
+    body: 'Delivery has not completed yet. You can redeem manually on the destination chain.',
+  },
+  failure: { title: 'Failed', body: 'The transfer could not be completed.' },
+  closeNote: 'You can close this window. The transfer continues on-chain and tracking resumes when you return.',
+  queueRelease: (when: string) => `Release time: ${when}`,
+} as const;
+
 export const TOKEN_ICONS = {
   fileType: 'webp',
   fileSize: '64px',

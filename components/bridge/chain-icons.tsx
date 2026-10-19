@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactElement } from 'react';
-import type { ActiveChain, ActiveChainKey } from '@/config/active_chains';
+import type { ActiveChain, ChainIconKey } from '@/config/active_chains';
 
 type IconProps = { className?: string };
 
@@ -44,7 +44,8 @@ export const EthereumIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
-export const CHAIN_ICONS: Record<ActiveChainKey, (p: IconProps) => ReactElement> = {
+// Keyed by ActiveChain.iconKey; testnet chains reuse their mainnet icon.
+export const CHAIN_ICONS: Record<ChainIconKey, (p: IconProps) => ReactElement> = {
   ethereum: EthereumIcon,
   base: BaseIcon,
   solana: SolanaIcon,
@@ -54,7 +55,7 @@ export const ChainIcon = ({
   chainKey,
   className,
 }: {
-  chainKey: ActiveChainKey;
+  chainKey: ChainIconKey;
   className?: string;
 }) => {
   const Icon = CHAIN_ICONS[chainKey];
