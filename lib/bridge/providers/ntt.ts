@@ -19,7 +19,6 @@ import {
   type ActiveChainKey,
 } from '@/config/active_chains';
 import {
-  NTT_MANUAL_REDEEM_AFTER_MS,
   NTT_REFERRER_FEE_BPS,
   NTT_TRACK_POLL_INTERVAL_MS,
   NTT_TRACK_TIMEOUT_MS,
@@ -78,7 +77,6 @@ type NttReceiptData = {
   fromChain: ActiveChainKey;
   toChain: ActiveChainKey;
   startedAt: number;
-  attestedAt?: number;
 };
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -182,7 +180,6 @@ const trackPass = async (d: NttReceiptData) => {
   try {
     for await (const r of d.whRoute.track(d.receipt, NTT_VAA_FETCH_TIMEOUT_MS)) {
       d.receipt = r as Receipt;
-      if (r.state === TransferState.Attested && !d.attestedAt) d.attestedAt = Date.now();
     }
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw err;
@@ -271,18 +268,16 @@ const toProgress = (d: NttReceiptData, opts: { stalled?: boolean } = {}): Bridge
     }
     case TransferState.DestinationInitiated:
       return { kind: 'tracking', stage: 2, copy: NTT_STATUS_COPY.destinationInitiated, links, note };
-    case TransferState.Attested: {
-      const waited = d.attestedAt ? Date.now() - d.attestedAt : 0;
-      const overdue = opts.stalled || waited >= NTT_MANUAL_REDEEM_AFTER_MS;
+    case TransferState.Attested:
+      // Every NTT transfer is redeemed by the user once Guardians have signed.
       return {
         kind: 'tracking',
         stage: 1,
-        copy: overdue ? NTT_STATUS_COPY.stalled : NTT_STATUS_COPY.attested,
+        copy: NTT_STATUS_COPY.attested,
         links,
-        note,
-        canRedeem: overdue,
+        note: NTT_STATUS_COPY.redeemNote,
+        canRedeem: true,
       };
-    }
     default:
       return {
         kind: 'tracking',
@@ -490,6 +485,12 @@ export const nttProvider: BridgeProvider = {
     const d = receipt.data as NttReceiptData;
     const dstChain = d.receipt.to as Chain;
     const signer = makeSigner(d.toChain, dstChain, signers);
+    // The Executor may have delivered it in the meantime; don't send a tx that would revert.
+    await refreshDestinationState(d);
+    if (d.receipt.state === TransferState.DestinationFinalized) {
+      onProgress(toProgress(d));
+      return;
+    }
     onProgress({ kind: 'executing', label: SWAP_PROGRESS_COPY.confirmInWallet });
     const next =
       d.receipt.state === TransferState.DestinationQueued

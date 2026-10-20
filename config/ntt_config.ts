@@ -35,7 +35,6 @@ export const NTT_QUOTE_REFRESH_MS = 30_000; // Executor signed quotes expire; re
 export const NTT_TRACK_POLL_INTERVAL_MS = 5_000;
 export const NTT_VAA_FETCH_TIMEOUT_MS = 60_000; // per-iteration wait for the Guardian VAA
 export const NTT_TRACK_TIMEOUT_MS = 60 * 60_000; // Base → Solana waits on Base finality (~15–30 min)
-export const NTT_MANUAL_REDEEM_AFTER_MS = 10 * 60_000; // offer "Redeem manually" if the Executor hasn't delivered by then
 
 // Pending transfers are remembered per viewer so tracking resumes after a reload.
 export const NTT_PENDING_STORAGE_KEY = 'aphid.ntt.pendingTransfers';

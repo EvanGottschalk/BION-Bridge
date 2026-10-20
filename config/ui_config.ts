@@ -135,6 +135,10 @@ export const BRIDGE_BUTTON_COPY = {
   awaitingQuote: 'Awaiting quote',
   exceedsCapacity: 'Exceeds bridge capacity',
   insufficientGas: 'Insufficient gas for relay fee',
+  redeem: 'Redeem',
+  redeeming: 'Redeeming…',
+  connectToRedeem: (vm: 'evm' | 'svm') =>
+    vm === 'svm' ? 'Connect Solana wallet to redeem' : 'Connect EVM wallet to redeem',
   swap: (from: string, to: string) => `Swap ${from} → ${to}`,
   bridge: (symbol: string) => `Bridge ${symbol}`,
 } as const;
@@ -161,7 +165,7 @@ export const QUOTE_ROW_LABELS = {
 } as const;
 
 export const NTT_QUOTE_COPY = {
-  delivery: 'Automatic (Wormhole Executor)',
+  delivery: 'Redeem on destination',
   capacityError: (available: string, symbol: string) =>
     `Exceeds bridge capacity (${available} ${symbol} available right now).`,
   capacityWarning: 'This amount is close to the destination rate limit and may be delayed.',
@@ -182,19 +186,20 @@ export const SWAP_PROGRESS_COPY = {
   wormholescan: 'View on Wormholescan',
   done: 'Done',
   close: 'Close',
-  redeem: 'Redeem manually',
+  redeem: 'Redeem',
   redeeming: 'Redeeming…',
+  viewStatus: 'View transfer status',
   noRequestId: 'Could not find a requestId to poll.',
   swapFailed: 'Swap failed',
   unknownError: 'Unknown error',
 } as const;
 
-// Destination-side "Redeem" panel for NTT transfers that were sent but never
-// delivered automatically.
+// Backup "Redeem" panel below the primary button, for NTT transfers the
+// primary button can't redeem (e.g. sent from another browser).
 export const NTT_REDEEM_COPY = {
   toggle: 'Redeem a sent transfer',
   explainer: (fromChain: string, toChain: string) =>
-    `Sent tokens from ${fromChain} but they never arrived on ${toChain}? Paste the ${fromChain} transaction hash and redeem them here.`,
+    `Have a ${fromChain} transfer that was never redeemed on ${toChain}? Paste the ${fromChain} transaction hash and redeem it here.`,
   inputLabel: 'Source transaction hash',
   inputPlaceholder: 'Transaction hash',
   redeem: 'Redeem',
@@ -215,9 +220,10 @@ export const NTT_STATUS_COPY = {
     body: 'Waiting for the source chain to finalize your transfer.',
   },
   attested: {
-    title: 'Signed by Wormhole Guardians',
-    body: 'The relayer is delivering your tokens to the destination chain.',
+    title: 'Ready to redeem',
+    body: 'Wormhole Guardians signed your transfer. Click Redeem to receive your tokens on the destination chain.',
   },
+  redeemNote: 'Redeeming needs a little native gas on the destination chain.',
   destinationInitiated: {
     title: 'Delivering',
     body: 'Waiting for confirmation on the destination chain.',

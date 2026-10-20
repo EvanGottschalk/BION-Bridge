@@ -50,17 +50,18 @@ BridgeCard ── useBridgeQuote ── router.selectProviderId(route) ── 'r
    - The last origin tx is saved to localStorage for resume.
 3. **Track:** `route.track()` is a single pass, so the provider loops it every `NTT_TRACK_POLL_INTERVAL_MS` for up to `NTT_TRACK_TIMEOUT_MS`. Progress-bar stages:
    - 0: submitted
-   - 1: signed by Guardians
+   - 1: signed by Guardians → **ready to redeem**
    - 2: delivering, or queued by rate limit
    - 3: complete
-4. **Manual redeem:** shown when one of these happens:
-   - the Executor reports a relay failure;
-   - delivery is overdue (`NTT_MANUAL_REDEEM_AFTER_MS` after attestation);
-   - a rate-limit-queued transfer passes its release time.
-
-   Redeem runs `route.complete` (or `route.finalize` for a queued transfer) with the destination wallet.
-5. **Destination-side Redeem panel** (`components/bridge/ntt-redeem-panel.tsx`):
-   - Shown under "You Receive" whenever an NTT pair is selected.
+4. **Redeem (every NTT transfer):** the user always redeems on the destination chain. The **primary bridge button** drives it (`BridgeCard`'s `primary` state):
+   - While submitting/waiting for Guardians: spinner, "Bridging…", disabled. A "View transfer status" link below reopens the progress modal.
+   - Once the VAA is signed (`canRedeem` on the progress): enabled "**Redeem**" (or "Connect … wallet to redeem", disabled, if the destination wallet isn't connected). The progress modal shows the same Redeem button.
+   - Clicking runs `route.complete` (or `route.finalize` for a rate-limit-queued transfer past its release time) with the destination wallet; tracking then runs to "Complete" and the button returns to normal.
+   - `redeem` re-reads the destination NttManager first; if the Executor already delivered, it skips the tx.
+   - Redeem is also offered when the Executor reports a relay failure.
+   - The Test Mode toggle is disabled while a transfer is bridging or redeemable.
+5. **Backup Redeem panel** (`components/bridge/ntt-redeem-panel.tsx`):
+   - Shown **below the primary button** whenever an NTT pair is selected; collapsed by default. For transfers the primary button can't reach (e.g. sent from another browser).
    - The user pastes the source tx hash (prefilled from the latest pending record) and clicks Redeem. `nttProvider.redeemByTx` then:
      - rebuilds the receipt from config;
      - fetches the Guardian VAA;
@@ -72,7 +73,7 @@ BridgeCard ── useBridgeQuote ── router.selectProviderId(route) ── 'r
    - The origin tx is recorded **the moment it's broadcast**, via the signer's `onSent`. An error after broadcast continues to tracking instead of a dead-end failure.
    - Solana confirmation polls `getSignatureStatuses` over HTTP. The websocket-based `confirmTransaction` could report "expired" for a tx that had landed.
    - Delivery state is read directly from the destination NttManager (`getIsExecuted`, `getIsApproved`, `getInboundQueuedTransfer`). The Executor status API can be down; it returned errors on 2026-10-18.
-7. **Resume:** on load, the most recent pending record for the current mode is rebuilt as a SourceInitiated receipt and tracked again. Records are removed on completion, after 7 days, or when no VAA ever appeared.
+7. **Resume:** on load, the most recent pending record for the current mode is rebuilt as a SourceInitiated receipt and tracked again (so the primary button shows "Redeem" again for an unredeemed transfer). Records are removed on completion, after 7 days, or when no VAA ever appeared.
 
 **Fees:** our fee is `UNIVERSAL_FEES.ALL` (0.5% → `NTT_REFERRER_FEE_BPS = 50`).
 - It is taken in the bridged token on the source chain and paid to `FEE_RECIPIENT_ADDRESSES[source ChainKey]`.

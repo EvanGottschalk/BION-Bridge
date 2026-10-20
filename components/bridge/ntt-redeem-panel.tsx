@@ -14,8 +14,9 @@ interface NttRedeemPanelProps {
   onRedeem: (txid: string) => void;
 }
 
-// Destination-side recovery for an NTT transfer that left the source wallet
-// but was never delivered: paste the source tx hash, redeem on this chain.
+// Backup recovery for an NTT transfer the primary Redeem button can't reach
+// (e.g. sent from another browser): paste the source tx hash, redeem here.
+// Collapsed by default; the primary button is the normal redeem path.
 export function NttRedeemPanel({
   fromChain,
   toChain,
@@ -24,14 +25,11 @@ export function NttRedeemPanel({
   busy,
   onRedeem,
 }: NttRedeemPanelProps) {
-  const [open, setOpen] = useState(Boolean(defaultTxid));
+  const [open, setOpen] = useState(false);
   const [txid, setTxid] = useState(defaultTxid ?? '');
 
   useEffect(() => {
-    if (defaultTxid) {
-      setTxid(defaultTxid);
-      setOpen(true);
-    }
+    if (defaultTxid) setTxid(defaultTxid);
   }, [defaultTxid]);
 
   const from = getActiveChain(fromChain);

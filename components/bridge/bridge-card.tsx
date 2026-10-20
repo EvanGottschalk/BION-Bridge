@@ -42,7 +42,7 @@ import {
 import { listPendingNtt } from '@/lib/ntt/pending';
 import { toBaseUnits } from '@/lib/relay/quote';
 
-type Flight = { provider: BridgeProvider; receipt: BridgeReceipt };
+type Flight = { provider: BridgeProvider; receipt: BridgeReceipt; toChain: ActiveChainKey };
 
 const errorMessage = (err: unknown): string =>
   (err as Error)?.message || SWAP_PROGRESS_COPY.unknownError;
@@ -82,6 +82,10 @@ export function BridgeCard() {
   const wallets = useActiveWallet();
   const originWallet = useWalletForChain(fromChain);
   const destWallet = useWalletForChain(toChain);
+  // Redeem happens on the in-flight transfer's destination, which can differ
+  // from the selected pair (e.g. a transfer resumed from an earlier visit).
+  const flightToChain = flightRef.current?.toChain ?? toChain;
+  const redeemWallet = useWalletForChain(flightToChain);
   const evmSigner = useEvmSigner();
   const svmSigner = useSvmSigner();
   const signers = useMemo<BridgeSigners>(
@@ -295,7 +299,7 @@ export function BridgeCard() {
     try {
       const provider = await loadProvider(quote.provider);
       const receipt = await provider.execute(quote, signers, setProgress);
-      flight = { provider, receipt };
+      flight = { provider, receipt, toChain: quote.route.toChain };
     } catch (err) {
       setProgress(failureProgress(err));
       setBusy(false);
@@ -308,6 +312,7 @@ export function BridgeCard() {
   const handleRedeem = async () => {
     const flight = flightRef.current;
     if (!flight?.provider.redeem) return;
+    setProgressOpen(true);
     setRedeeming(true);
     setRedeemError(undefined);
     try {
@@ -334,7 +339,7 @@ export function BridgeCard() {
       if (cancelled) return;
       setProgressOpen(true);
       setProgress({ kind: 'tracking', stage: 0, copy: NTT_STATUS_COPY.sourceInitiated, links: [] });
-      await runTrack({ provider, receipt });
+      await runTrack({ provider, receipt, toChain: latest.toChain });
     })().catch(() => {
       // A broken record just doesn't resume.
     });
@@ -359,6 +364,7 @@ export function BridgeCard() {
     setRedeemError(undefined);
     setProgress({ kind: 'executing', label: NTT_REDEEM_COPY.lookingUp });
     setBusy(true);
+    setRedeeming(true);
     let flight: Flight;
     try {
       const provider = await loadProvider('ntt');
@@ -368,21 +374,46 @@ export function BridgeCard() {
         signers,
         setProgress
       );
-      flight = { provider, receipt };
+      flight = { provider, receipt, toChain };
     } catch (err) {
       setProgress(failureProgress(err));
       setBusy(false);
       return;
+    } finally {
+      setRedeeming(false);
     }
     await runTrack(flight);
   };
 
+  // An NTT transfer becomes redeemable once Guardians sign it; the primary
+  // button then switches to "Redeem" for that transfer.
+  const redeemReady =
+    !redeeming &&
+    Boolean(flightRef.current?.provider.redeem) &&
+    (progress.kind === 'tracking' || progress.kind === 'failure') &&
+    Boolean(progress.canRedeem);
+
+  const primary = useMemo<{ label: string; disabled: boolean; spinning: boolean }>(() => {
+    if (redeeming) return { label: BRIDGE_BUTTON_COPY.redeeming, disabled: true, spinning: true };
+    if (redeemReady) {
+      return redeemWallet.isConnected
+        ? { label: BRIDGE_BUTTON_COPY.redeem, disabled: false, spinning: false }
+        : {
+            label: BRIDGE_BUTTON_COPY.connectToRedeem(getActiveChain(flightToChain).vmType),
+            disabled: true,
+            spinning: false,
+          };
+    }
+    if (busy) return { label: BRIDGE_CARD_COPY.bridging, disabled: true, spinning: true };
+    return { label: buttonState.label, disabled: buttonState.disabled, spinning: false };
+  }, [redeeming, redeemReady, redeemWallet.isConnected, flightToChain, busy, buttonState]);
+
   const onButtonClick = () => {
-    if (busy) {
-      setProgressOpen(true); // reopen the progress modal for the in-flight transfer
+    if (primary.disabled) return;
+    if (redeemReady) {
+      handleRedeem();
       return;
     }
-    if (buttonState.disabled) return;
     if (buttonState.action === 'connect') {
       // ConnectButton in header is the primary entry point; the label is a cue.
       return;
@@ -434,7 +465,7 @@ export function BridgeCard() {
                   <Switch
                     checked={testMode}
                     onCheckedChange={setTestMode}
-                    disabled={busy}
+                    disabled={busy || redeeming || redeemReady}
                     aria-label={TEST_MODE_COPY.label}
                     className="data-[state=checked]:bg-amber-400"
                   />
@@ -539,16 +570,6 @@ export function BridgeCard() {
                   </span>
                 </div>
               </div>
-              {nttSymbol && (
-                <NttRedeemPanel
-                  fromChain={fromChain}
-                  toChain={toChain}
-                  defaultTxid={latestPendingTxid}
-                  destConnected={destWallet.isConnected}
-                  busy={busy}
-                  onRedeem={handleRedeemByTx}
-                />
-              )}
             </div>
           </div>
 
@@ -557,18 +578,41 @@ export function BridgeCard() {
           <button
             type="button"
             onClick={onButtonClick}
-            disabled={!busy && buttonState.disabled}
+            disabled={primary.disabled}
             className="w-full mt-5 py-3.5 rounded-xl font-semibold text-sm transition-all duration-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 glass-button text-white hover:shadow-[0_0_40px_rgba(74,108,247,0.35)] active:scale-[0.98]"
           >
-            {busy ? (
+            {primary.spinning ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {BRIDGE_CARD_COPY.bridging}
+                {primary.label}
               </span>
             ) : (
-              buttonState.label
+              primary.label
             )}
           </button>
+
+          {(busy || redeemReady) && !progressOpen && (
+            <button
+              type="button"
+              onClick={() => setProgressOpen(true)}
+              className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              {SWAP_PROGRESS_COPY.viewStatus}
+            </button>
+          )}
+
+          {nttSymbol && (
+            <div className="mt-3">
+              <NttRedeemPanel
+                fromChain={fromChain}
+                toChain={toChain}
+                defaultTxid={latestPendingTxid}
+                destConnected={destWallet.isConnected}
+                busy={busy || redeeming}
+                onRedeem={handleRedeemByTx}
+              />
+            </div>
+          )}
         </div>
       </div>
 

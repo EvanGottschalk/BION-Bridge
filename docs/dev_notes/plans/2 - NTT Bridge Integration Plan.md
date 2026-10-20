@@ -346,7 +346,8 @@ The spike was a read-only `validate` + `quote` against testnet, with no funds mo
 ### Deviations from the plan
 - **Toggle placement:** the "Live"/"Testnet" badge stays next to the title. The Test Mode switch with its ON/OFF label sits on the right of the header, before "Operational", and wraps under the title on narrow screens.
 - **Inherited bug fixed:** the 20 s Relay quote auto-refresh never re-fetched, because the timer reset the cache key but nothing re-ran the effect, so the button stuck on "Fetching quote…". `useBridgeQuote` now bumps a refresh tick.
-- **Closing the progress modal mid-flight now keeps the card locked.** Clicking the "Bridging…" button reopens the modal. Before, closing the modal unlocked the card mid-transfer.
+- **Closing the progress modal mid-flight now keeps the card locked.** A "View transfer status" link under the button reopens the modal. Before, closing the modal unlocked the card mid-transfer.
+- **Redeem is always manual (decision, 2026-10-19).** Every NTT transfer is redeemed by the user. The primary button reads "Bridging…" (disabled) until the Guardians sign, then switches to an enabled "Redeem". This replaces the "redeem after N minutes" fallback (`NTT_MANUAL_REDEEM_AFTER_MS` was removed). The paste-a-tx-hash Redeem panel is a collapsed backup below the button. Transfers still go through the Executor route, because that route is what charges our 0.5% referrer fee.
 - `hooks/use-relay-quote.ts` is no longer imported anywhere. It was left in place and can be deleted.
 
 ### Not yet verified
