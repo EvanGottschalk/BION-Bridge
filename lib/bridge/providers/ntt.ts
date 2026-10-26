@@ -5,6 +5,8 @@ import {
   TransferState,
   Wormhole,
   amount as whAmount,
+  deserialize,
+  encoding,
   isNative,
   type Chain,
   type SignAndSendSigner,
@@ -286,6 +288,34 @@ const toProgress = (d: NttReceiptData, opts: { stalled?: boolean } = {}): Bridge
         links,
         note,
       };
+  }
+};
+
+export type NttTransferStatus = 'pending' | 'redeemable' | 'queued' | 'redeemed' | 'unknown';
+
+// Redemption status of a past transfer, read from the destination NttManager
+// using the VAA Wormholescan already returned (no extra VAA fetch).
+export const getNttTransferStatus = async (item: {
+  symbol: string;
+  network: WhNetwork;
+  toChain: ActiveChainKey;
+  vaa?: string;
+}): Promise<NttTransferStatus> => {
+  if (!item.vaa) return 'pending';
+  const dstKey = getActiveChain(item.toChain).chainKey;
+  const dstEntry = NTT_BRIDGE_INFO[item.symbol]?.chains[dstKey];
+  if (!dstEntry) return 'unknown';
+  try {
+    const vaa = deserialize('Ntt:WormholeTransfer', encoding.b64.decode(item.vaa));
+    const chain = getWormhole(item.network).getChain(toWormholeChain(dstKey));
+    const ntt = await chain.getProtocol('Ntt', { ntt: contractsFor(dstEntry) });
+    const att = vaa as unknown as Parameters<typeof ntt.getIsExecuted>[0];
+    if (await ntt.getIsExecuted(att)) return 'redeemed';
+    const queued = await ntt.getInboundQueuedTransfer(vaa.emitterChain, vaa.payload.nttManagerPayload);
+    if (queued) return Date.now() >= queued.rateLimitExpiryTimestamp * 1000 ? 'redeemable' : 'queued';
+    return 'redeemable';
+  } catch {
+    return 'unknown';
   }
 };
 

@@ -60,8 +60,13 @@ BridgeCard ── useBridgeQuote ── router.selectProviderId(route) ── 'r
    - `redeem` re-reads the destination NttManager first; if the Executor already delivered, it skips the tx.
    - Redeem is also offered when the Executor reports a relay failure.
    - The Test Mode toggle is disabled while a transfer is bridging or redeemable.
-5. **Backup Redeem panel** (`components/bridge/ntt-redeem-panel.tsx`):
+5. **Backup "Redeem past transfers" panel** (`components/bridge/ntt-redeem-panel.tsx`):
    - Shown **below the primary button** whenever an NTT pair is selected; collapsed by default. For transfers the primary button can't reach (e.g. sent from another browser).
+   - **Show Past Transactions** (`components/bridge/ntt-history-list.tsx`, above the hash field) lists up to `NTT_HISTORY_LIMIT` (10) past NTT bridgings for the connected EVM and Solana wallets, across all NTT routes in the current mode:
+     - Source: Wormholescan's operations API (`WORMHOLESCAN_OPERATIONS_URL`, `lib/ntt/history.ts`), one request per wallet, merged and newest first. Only tokens in `NTT_BRIDGE_INFO` on supported chains are kept (matched on `tokenChain` + `tokenAddress`).
+     - Each row: bridged amount (after our fee, as encoded in the VAA), route, local date/time, truncated source tx linking to that chain's explorer, and a copy-hash button.
+     - Status is read **on-chain**, not from Wormholescan (its `targetChain` field was empty on testnet even for redeemed transfers). `getNttTransferStatus` (in `lib/bridge/providers/ntt.ts`, loaded via `router.loadNttTransferStatus`) decodes the VAA Wormholescan returned and asks the destination NttManager: Redeemed / Queued / **Redeem** button / Awaiting signatures (no VAA yet) / Unavailable.
+     - Redeem goes through the same `redeemByTx` path as the pasted hash. The button is disabled until a wallet for the destination chain is connected. The list re-checks after each transfer or redeem finishes.
    - The user pastes the source tx hash (prefilled from the latest pending record) and clicks Redeem. `nttProvider.redeemByTx` then:
      - rebuilds the receipt from config;
      - fetches the Guardian VAA;

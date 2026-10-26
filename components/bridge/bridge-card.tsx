@@ -39,7 +39,8 @@ import {
   getNttTokenInfo,
   isNttToken,
 } from '@/lib/ntt/registry';
-import { listPendingNtt } from '@/lib/ntt/pending';
+import { listPendingNtt, type PendingNttTransfer } from '@/lib/ntt/pending';
+import type { NttHistoryItem } from '@/lib/ntt/history';
 import { toBaseUnits } from '@/lib/relay/quote';
 
 type Flight = { provider: BridgeProvider; receipt: BridgeReceipt; toChain: ActiveChainKey };
@@ -358,8 +359,33 @@ export function BridgeCard() {
     // `busy` re-reads storage after a transfer starts or finishes.
   }, [nttSymbol, network, fromChain, toChain, busy]);
 
-  const handleRedeemByTx = async (txid: string) => {
-    if (!nttSymbol || busy) return;
+  const historyAddresses = useMemo(
+    () => [wallets.evm.address, wallets.svm.address].filter((a): a is string => Boolean(a)),
+    [wallets.evm.address, wallets.svm.address]
+  );
+  const connectedVms = useMemo(
+    () => ({ evm: wallets.evm.isConnected, svm: wallets.svm.isConnected }),
+    [wallets.evm.isConnected, wallets.svm.isConnected]
+  );
+
+  const handleRedeemByTx = (txid: string) => {
+    if (!nttSymbol) return;
+    void runRedeemByTx({ symbol: nttSymbol, network, fromChain, toChain, txid, startedAt: Date.now() });
+  };
+
+  const handleRedeemHistoryItem = (item: NttHistoryItem) => {
+    void runRedeemByTx({
+      symbol: item.symbol,
+      network: item.network,
+      fromChain: item.fromChain,
+      toChain: item.toChain,
+      txid: item.txid,
+      startedAt: Date.now(),
+    });
+  };
+
+  const runRedeemByTx = async (record: PendingNttTransfer) => {
+    if (busy) return;
     setProgressOpen(true);
     setRedeemError(undefined);
     setProgress({ kind: 'executing', label: NTT_REDEEM_COPY.lookingUp });
@@ -369,12 +395,8 @@ export function BridgeCard() {
     try {
       const provider = await loadProvider('ntt');
       if (!provider.redeemByTx) throw new Error(SWAP_PROGRESS_COPY.unknownError);
-      const receipt = await provider.redeemByTx(
-        { symbol: nttSymbol, network, fromChain, toChain, txid, startedAt: Date.now() },
-        signers,
-        setProgress
-      );
-      flight = { provider, receipt, toChain };
+      const receipt = await provider.redeemByTx(record, signers, setProgress);
+      flight = { provider, receipt, toChain: record.toChain };
     } catch (err) {
       setProgress(failureProgress(err));
       setBusy(false);
@@ -606,10 +628,14 @@ export function BridgeCard() {
               <NttRedeemPanel
                 fromChain={fromChain}
                 toChain={toChain}
+                network={network}
                 defaultTxid={latestPendingTxid}
                 destConnected={destWallet.isConnected}
+                addresses={historyAddresses}
+                connectedVms={connectedVms}
                 busy={busy || redeeming}
                 onRedeem={handleRedeemByTx}
+                onRedeemItem={handleRedeemHistoryItem}
               />
             </div>
           )}

@@ -42,3 +42,29 @@ export const NTT_PENDING_MAX_AGE_MS = 7 * 24 * 60 * 60_000;
 
 export const WORMHOLESCAN_TX_URL = (txHash: string, network: 'Mainnet' | 'Testnet'): string =>
   `https://wormholescan.io/#/tx/${txHash}?network=${network}`;
+
+// Numeric Wormhole chain ids (as Wormholescan reports them). Solana mainnet and
+// devnet are both 1; the network tells them apart.
+export const WORMHOLE_CHAIN_ID_BY_CHAINKEY: Partial<Record<ChainKey, number>> = {
+  ETH_MAINNET: 2,
+  BASE_MAINNET: 30,
+  SOLANA_MAINNET: 1,
+  ETH_SEPOLIA: 10002,
+  BASE_SEPOLIA: 10004,
+  SOLANA_DEVNET: 1,
+};
+
+// Past-transfer history ("Show Past Transactions") comes from Wormholescan's
+// operations API, which indexes every Wormhole message by sender/recipient.
+export const WORMHOLESCAN_API_BASE: Record<'Mainnet' | 'Testnet', string> = {
+  Mainnet: 'https://api.wormholescan.io',
+  Testnet: 'https://api.testnet.wormholescan.io',
+};
+export const WORMHOLESCAN_OPERATIONS_URL = (
+  network: 'Mainnet' | 'Testnet',
+  address: string,
+  pageSize: number
+): string =>
+  `${WORMHOLESCAN_API_BASE[network]}/api/v1/operations?address=${encodeURIComponent(address)}&page=0&pageSize=${pageSize}`;
+export const NTT_HISTORY_LIMIT = 10; // rows shown
+export const NTT_HISTORY_FETCH_PAGE_SIZE = 50; // fetched per wallet; non-NTT / other-token operations are filtered out

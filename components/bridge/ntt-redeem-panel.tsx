@@ -3,29 +3,41 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { getActiveChain, type ActiveChainKey } from '@/config/active_chains';
-import { NTT_REDEEM_COPY } from '@/config/ui_config';
+import { NTT_HISTORY_COPY, NTT_REDEEM_COPY } from '@/config/ui_config';
+import type { NttHistoryItem } from '@/lib/ntt/history';
+import { NttHistoryList } from './ntt-history-list';
 
 interface NttRedeemPanelProps {
   fromChain: ActiveChainKey;
   toChain: ActiveChainKey;
+  network: 'Mainnet' | 'Testnet';
   defaultTxid?: string; // latest known pending transfer for this route
   destConnected: boolean;
+  addresses: string[]; // connected wallet addresses, for the past-transactions list
+  connectedVms: { evm: boolean; svm: boolean };
   busy: boolean;
   onRedeem: (txid: string) => void;
+  onRedeemItem: (item: NttHistoryItem) => void;
 }
 
-// Backup recovery for an NTT transfer the primary Redeem button can't reach
-// (e.g. sent from another browser): paste the source tx hash, redeem here.
-// Collapsed by default; the primary button is the normal redeem path.
+// Backup recovery for NTT transfers the primary Redeem button can't reach
+// (e.g. sent from another browser): pick one from the wallet's past
+// transactions, or paste the source tx hash. Collapsed by default; the primary
+// button is the normal redeem path.
 export function NttRedeemPanel({
   fromChain,
   toChain,
+  network,
   defaultTxid,
   destConnected,
+  addresses,
+  connectedVms,
   busy,
   onRedeem,
+  onRedeemItem,
 }: NttRedeemPanelProps) {
   const [open, setOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [txid, setTxid] = useState(defaultTxid ?? '');
 
   useEffect(() => {
@@ -50,6 +62,24 @@ export function NttRedeemPanel({
 
       {open && (
         <div className="px-4 pb-4 space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            aria-expanded={showHistory}
+            className="w-full py-2 rounded-lg text-xs font-semibold border border-white/15 text-foreground hover:border-primary/50 transition-colors cursor-pointer"
+          >
+            {showHistory ? NTT_HISTORY_COPY.hide : NTT_HISTORY_COPY.show}
+          </button>
+          {showHistory && (
+            <NttHistoryList
+              network={network}
+              addresses={addresses}
+              connectedVms={connectedVms}
+              busy={busy}
+              onRedeem={onRedeemItem}
+            />
+          )}
+
           <p className="text-[11px] text-muted-foreground leading-relaxed">
             {NTT_REDEEM_COPY.explainer(from.displayName, to.displayName)}
           </p>

@@ -197,7 +197,7 @@ export const SWAP_PROGRESS_COPY = {
 // Backup "Redeem" panel below the primary button, for NTT transfers the
 // primary button can't redeem (e.g. sent from another browser).
 export const NTT_REDEEM_COPY = {
-  toggle: 'Redeem a sent transfer',
+  toggle: 'Redeem past transfers',
   explainer: (fromChain: string, toChain: string) =>
     `Have a ${fromChain} transfer that was never redeemed on ${toChain}? Paste the ${fromChain} transaction hash and redeem it here.`,
   inputLabel: 'Source transaction hash',
@@ -212,6 +212,38 @@ export const NTT_REDEEM_COPY = {
     'Wormhole Guardians have not signed this transfer yet. Wait for the source chain to finalize, then try again.',
   wrongRoute: 'That transaction is not a transfer to this destination chain.',
 } as const;
+
+// "Show Past Transactions" list inside the Redeem past transfers panel.
+export const NTT_HISTORY_COPY = {
+  show: 'Show Past Transactions',
+  hide: 'Hide Past Transactions',
+  loading: 'Loading past transactions…',
+  empty: 'No past bridge transactions found for your connected wallets.',
+  connectWallet: 'Connect a wallet to see your past transactions.',
+  loadFailed: 'Could not load past transactions. Please try again.',
+  retry: 'Retry',
+  copyTx: 'Copy transaction hash',
+  copied: 'Copied',
+  viewTx: 'View transaction',
+  redeem: 'Redeem',
+  connectToRedeem: (vm: 'evm' | 'svm') =>
+    vm === 'svm' ? 'Connect a Solana wallet to redeem' : 'Connect an EVM wallet to redeem',
+  status: {
+    checking: 'Checking…',
+    pending: 'Awaiting signatures',
+    queued: 'Queued',
+    redeemed: 'Redeemed',
+    unknown: 'Unavailable',
+  },
+} as const;
+export const NTT_HISTORY_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+};
+export const NTT_HISTORY_TX_TRUNCATE = { head: 6, tail: 4 } as const;
 
 // Status copy for NTT transfers, keyed to Wormhole TransferState milestones.
 export const NTT_STATUS_COPY = {

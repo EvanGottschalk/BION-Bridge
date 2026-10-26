@@ -28,6 +28,9 @@ export const loadProvider = (id: BridgeProviderId): Promise<BridgeProvider> => {
   return nttProviderPromise;
 };
 
+// On-chain redemption status for the past-transactions list (same NTT chunk).
+export const loadNttTransferStatus = () => import('./providers/ntt').then((m) => m.getNttTransferStatus);
+
 export const QUOTE_TIMINGS: Record<BridgeProviderId, { debounceMs: number; refreshMs: number }> = {
   relay: { debounceMs: RELAY_QUOTE_DEBOUNCE_MS, refreshMs: RELAY_QUOTE_REFRESH_MS },
   ntt: { debounceMs: NTT_QUOTE_DEBOUNCE_MS, refreshMs: NTT_QUOTE_REFRESH_MS },
