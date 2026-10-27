@@ -38,6 +38,7 @@ export function NttRedeemPanel({
 }: NttRedeemPanelProps) {
   const [open, setOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyTick, setHistoryTick] = useState(0); // each press re-checks for new transactions
   const [txid, setTxid] = useState(defaultTxid ?? '');
 
   useEffect(() => {
@@ -64,14 +65,17 @@ export function NttRedeemPanel({
         <div className="px-4 pb-4 space-y-3">
           <button
             type="button"
-            onClick={() => setShowHistory((v) => !v)}
-            aria-expanded={showHistory}
+            onClick={() => {
+              setShowHistory(true);
+              setHistoryTick((t) => t + 1);
+            }}
             className="w-full py-2 rounded-lg text-xs font-semibold border border-white/15 text-foreground hover:border-primary/50 transition-colors cursor-pointer"
           >
-            {showHistory ? NTT_HISTORY_COPY.hide : NTT_HISTORY_COPY.show}
+            {NTT_HISTORY_COPY.show}
           </button>
           {showHistory && (
             <NttHistoryList
+              refreshKey={historyTick}
               network={network}
               addresses={addresses}
               connectedVms={connectedVms}

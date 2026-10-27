@@ -213,10 +213,16 @@ export const NTT_REDEEM_COPY = {
   wrongRoute: 'That transaction is not a transfer to this destination chain.',
 } as const;
 
+// Shown when a wallet-signed Solana tx is blocked before sending because the
+// wallet rearranged it in a way that would make it fail on-chain.
+export const SOLANA_TX_COPY = {
+  instructionsReordered:
+    'Your wallet rearranged this Solana transaction in a way that would make it fail, so it was not sent. Please try again or use a different Solana wallet.',
+} as const;
+
 // "Show Past Transactions" list inside the Redeem past transfers panel.
 export const NTT_HISTORY_COPY = {
   show: 'Show Past Transactions',
-  hide: 'Hide Past Transactions',
   loading: 'Loading past transactions…',
   empty: 'No past bridge transactions found for your connected wallets.',
   connectWallet: 'Connect a wallet to see your past transactions.',

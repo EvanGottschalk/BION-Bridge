@@ -14,6 +14,7 @@ import { loadNttTransferStatus } from '@/lib/bridge/router';
 import type { NttTransferStatus } from '@/lib/bridge/providers/ntt';
 
 interface NttHistoryListProps {
+  refreshKey: number; // bumped by each "Show Past Transactions" press to re-fetch
   network: 'Mainnet' | 'Testnet';
   addresses: string[]; // connected wallet addresses
   connectedVms: { evm: boolean; svm: boolean };
@@ -33,15 +34,23 @@ const truncateTx = (tx: string): string =>
 
 // Up to NTT_HISTORY_LIMIT past NTT bridgings for the connected wallets, each
 // with its on-chain redemption status (and a Redeem button when redeemable).
-export function NttHistoryList({ network, addresses, connectedVms, busy, onRedeem }: NttHistoryListProps) {
+export function NttHistoryList({
+  refreshKey,
+  network,
+  addresses,
+  connectedVms,
+  busy,
+  onRedeem,
+}: NttHistoryListProps) {
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [statuses, setStatuses] = useState<Record<string, NttTransferStatus>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const addressKey = addresses.join(',');
 
-  // Re-fetch when wallets/mode change, on retry, and whenever an in-flight
-  // transfer or redeem finishes (busy → false), so statuses stay current.
+  // Re-fetch when wallets/mode change, on each "Show Past Transactions" press,
+  // on retry, and whenever an in-flight transfer or redeem finishes
+  // (busy → false), so statuses stay current.
   useEffect(() => {
     if (!addressKey) return;
     const controller = new AbortController();
@@ -67,7 +76,7 @@ export function NttHistoryList({ network, addresses, connectedVms, busy, onRedee
       cancelled = true;
       controller.abort();
     };
-  }, [network, addressKey, busy, reloadTick]);
+  }, [network, addressKey, busy, reloadTick, refreshKey]);
 
   useEffect(() => {
     if (!copiedId) return;

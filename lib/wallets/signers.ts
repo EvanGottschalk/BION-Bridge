@@ -26,6 +26,12 @@ import {
   SOLANA_CONFIRM_POLL_INTERVAL_MS,
   SOLANA_CONFIRM_TIMEOUT_MS,
 } from '@/config/blockchain_config';
+import { SOLANA_TX_COPY } from '@/config/ui_config';
+import {
+  findPrecompileOffsetProblems,
+  logPrecompileProblems,
+  logSolanaTxFailure,
+} from './solana-diagnostics';
 
 const decodeBase64ToUint8 = (b64: string): Uint8Array => {
   if (typeof Buffer !== 'undefined') return Uint8Array.from(Buffer.from(b64, 'base64'));
@@ -207,9 +213,12 @@ export const useSvmSigner = (): SvmSigner | null => {
       const tx = parseSolanaTransaction(b64);
       const signed = await wallet.signTransaction(tx);
       const signedTxBytes = signed.serialize();
-      const sig = await (connection as Connection).sendRawTransaction(signedTxBytes, {
-        skipPreflight: false,
-      });
+      const sig = await (connection as Connection)
+        .sendRawTransaction(signedTxBytes, { skipPreflight: false })
+        .catch(async (err) => {
+          await logSolanaTxFailure('sendBase64Tx', err, connection as Connection, signed);
+          throw err;
+        });
       await (connection as Connection).confirmTransaction(sig, 'confirmed').catch(() => {});
       return sig;
     },
@@ -250,9 +259,12 @@ export const useSvmSigner = (): SvmSigner | null => {
 
       const tx = new VersionedTransaction(message);
       const signed = await wallet.signTransaction(tx);
-      const sig = await (connection as Connection).sendRawTransaction(signed.serialize(), {
-        skipPreflight: false,
-      });
+      const sig = await (connection as Connection)
+        .sendRawTransaction(signed.serialize(), { skipPreflight: false })
+        .catch(async (err) => {
+          await logSolanaTxFailure('sendRawInstructions', err, connection as Connection, signed);
+          throw err;
+        });
       await (connection as Connection).confirmTransaction(sig, 'confirmed').catch(() => {});
       return sig;
     },
@@ -285,14 +297,31 @@ export const useSvmSigner = (): SvmSigner | null => {
       }
 
       const signed = await wallet.signTransaction(tx);
+
+      // Wallets may insert instructions (e.g. Phantom prepends ComputeBudget
+      // priority fees). That breaks signature-verification precompiles, whose
+      // data offsets name fixed instruction indexes, so stop before sending a
+      // tx that can only fail.
+      const problems = findPrecompileOffsetProblems(signed);
+      if (problems.length) {
+        logPrecompileProblems('signAndSendTx', signed, problems);
+        throw new Error(SOLANA_TX_COPY.instructionsReordered);
+      }
+
       if (extraSigners.length) {
         if (isVersionedTx(signed)) signed.sign(extraSigners);
         else signed.partialSign(...extraSigners);
       }
 
-      const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-      onSent?.(sig);
-      await waitForSolanaConfirmation(conn, sig, lastValidBlockHeight);
+      let sig: string | undefined;
+      try {
+        sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+        onSent?.(sig);
+        await waitForSolanaConfirmation(conn, sig, lastValidBlockHeight);
+      } catch (err) {
+        await logSolanaTxFailure(sig ? `signAndSendTx ${sig}` : 'signAndSendTx', err, conn, signed);
+        throw err;
+      }
       return sig;
     },
     [connection, wallet]

@@ -108,6 +108,7 @@ const makeSigner = (
   chainKey: ActiveChainKey,
   whChain: Chain,
   signers: BridgeSigners,
+  network: WhNetwork,
   addressOverride?: string,
   onSent?: OnTxSent
 ): SignAndSendSigner<WhNetwork, Chain> => {
@@ -119,7 +120,8 @@ const makeSigner = (
   }
   const address = addressOverride ?? signers.svmAddress;
   if (!signers.svm || !address) throw new Error(NTT_QUOTE_COPY.walletRequired('svm'));
-  return makeSvmWhSigner(whChain, address, signers.svm, onSent);
+  const rpc = getWormhole(network).getChain(whChain).getRpc() as Parameters<typeof makeSvmWhSigner>[3];
+  return makeSvmWhSigner(whChain, address, signers.svm, rpc, onSent);
 };
 
 // Setup txs that don't move tokens; the transfer is the last other tx sent.
@@ -453,7 +455,7 @@ export const nttProvider: BridgeProvider = {
       sentTxid = txid;
       addPendingNtt(record(txid));
     };
-    const signer = makeSigner(route.fromChain, srcChain, signers, route.user, onSent);
+    const signer = makeSigner(route.fromChain, srcChain, signers, network, route.user, onSent);
 
     onProgress({ kind: 'executing', label: SWAP_PROGRESS_COPY.confirmInWallet });
     let receipt: Receipt | undefined;
@@ -514,7 +516,7 @@ export const nttProvider: BridgeProvider = {
   async redeem(receipt, signers, onProgress): Promise<void> {
     const d = receipt.data as NttReceiptData;
     const dstChain = d.receipt.to as Chain;
-    const signer = makeSigner(d.toChain, dstChain, signers);
+    const signer = makeSigner(d.toChain, dstChain, signers, d.network);
     // The Executor may have delivered it in the meantime; don't send a tx that would revert.
     await refreshDestinationState(d);
     if (d.receipt.state === TransferState.DestinationFinalized) {
