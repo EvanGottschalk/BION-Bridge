@@ -21,7 +21,7 @@ import {
 } from '@/config/ui_config';
 import { NTT_TRIMMED_DECIMALS } from '@/config/ntt_config';
 import { useBridgeQuote } from '@/hooks/use-bridge-quote';
-import { useTokenBalance } from '@/hooks/use-token-balance';
+import { formatTokenAmount, useTokenBalance } from '@/hooks/use-token-balance';
 import { useActiveChains, useNetworkMode } from '@/lib/network/network-mode';
 import { useActiveWallet, useWalletForChain } from '@/lib/wallets/use-active-wallet';
 import { useEvmSigner, useSvmSigner } from '@/lib/wallets/signers';
@@ -218,6 +218,12 @@ export function BridgeCard() {
       return 0n;
     }
   }, [amount, fromToken]);
+
+  // Full wallet balance, rounded down to the decimals the amount field accepts.
+  const maxAmount =
+    fromToken && fromBalance.raw !== null && fromBalance.raw > 0n
+      ? formatTokenAmount(fromBalance.raw, fromToken.decimals ?? 18, maxDecimals)
+      : null;
 
   const insufficientBalance =
     fromBalance.raw !== null && !fromBalance.loading && amountUnits > fromBalance.raw;
@@ -546,6 +552,15 @@ export function BridgeCard() {
                     }}
                     className="flex-1 bg-transparent text-foreground text-lg font-medium outline-none placeholder:text-muted-foreground/40 min-w-0"
                   />
+                  <button
+                    type="button"
+                    onClick={() => maxAmount && setAmount(maxAmount)}
+                    disabled={!maxAmount || busy || redeeming}
+                    aria-label={BRIDGE_CARD_COPY.maxAria}
+                    className="shrink-0 px-2 py-0.5 rounded-md border border-primary/40 text-[11px] font-semibold uppercase tracking-wider text-primary hover:border-primary transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {BRIDGE_CARD_COPY.max}
+                  </button>
                   <span className="text-sm text-muted-foreground font-medium">
                     {fromToken?.symbol ?? ''}
                   </span>

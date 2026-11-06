@@ -120,6 +120,8 @@ export const BRIDGE_CARD_COPY = {
   amountLabel: 'Amount',
   receiveLabel: 'You Receive',
   amountPlaceholder: '0.00',
+  max: 'Max',
+  maxAria: 'Use maximum balance',
   swapSidesAria: 'Swap chains',
   bridging: 'Bridging…',
 } as const;

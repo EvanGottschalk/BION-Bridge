@@ -83,6 +83,13 @@ All form state is local React state inside `BridgeCard`:
 The amount input accepts only `^\d*(?:\.\d*)?$` and rewrites commas to dots so
 European decimal input still works (`bridge-card.tsx:218`).
 
+A **Max** button inside the From amount field fills it with the full wallet
+balance of the selected token (`maxAmount`, from `useTokenBalance`'s raw
+value), rounded down to the decimals the field accepts (8 on NTT routes). It is
+disabled when the balance is unknown or zero, or while a transfer/redeem is in
+flight. For a native token (ETH/SOL) it uses the whole balance, so the button
+will read "Insufficient gas" until the user lowers the amount.
+
 ### 2.3 Three handlers worth knowing
 
 - **`onChainFromChange` / `onChainToChange`** — if the new chain equals the
