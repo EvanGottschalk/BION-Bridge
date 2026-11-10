@@ -1,7 +1,8 @@
 'use client';
 
-import type { ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import type { ActiveChain, ChainIconKey } from '@/config/active_chains';
+import { ICON_SIZES_PX, TOKEN_ICON_URL } from '@/config/ui_config';
 
 type IconProps = { className?: string };
 
@@ -44,25 +45,50 @@ export const EthereumIcon = ({ className = 'w-5 h-5' }: IconProps) => (
   </svg>
 );
 
-// Keyed by ActiveChain.iconKey; testnet chains reuse their mainnet icon.
+// Keyed by ActiveChain.iconKey; fallback when the chain's image icon fails to load.
 export const CHAIN_ICONS: Record<ChainIconKey, (p: IconProps) => ReactElement> = {
   ethereum: EthereumIcon,
   base: BaseIcon,
   solana: SolanaIcon,
 };
 
+// The chain's gas-token image (ActiveChain.iconSymbol, e.g. "ETH" or "SOL Test")
+// from src/image/tokens; falls back to the built-in SVG if the image is missing.
+// `size` is in CSS pixels; callers pass a value from ICON_SIZES_PX.
 export const ChainIcon = ({
-  chainKey,
-  className,
+  chain,
+  size = ICON_SIZES_PX.dropdownChain,
 }: {
-  chainKey: ChainIconKey;
-  className?: string;
+  chain: ActiveChain;
+  size?: number;
 }) => {
-  const Icon = CHAIN_ICONS[chainKey];
-  return <Icon className={className} />;
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [chain.iconSymbol]);
+
+  const style = { width: size, height: size };
+  if (failed) {
+    const Icon = CHAIN_ICONS[chain.iconKey];
+    return (
+      <span className="inline-flex shrink-0" style={style}>
+        <Icon className="w-full h-full" />
+      </span>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={TOKEN_ICON_URL(chain.iconSymbol)}
+      alt={chain.displayName}
+      width={size}
+      height={size}
+      style={style}
+      className="shrink-0 rounded-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
 };
 
-export const renderChainBadge = (chain: ActiveChain) => {
-  const Icon = CHAIN_ICONS[chain.iconKey];
-  return <Icon className="w-5 h-5" />;
-};
+export const renderChainBadge = (chain: ActiveChain) => <ChainIcon chain={chain} />;

@@ -6,9 +6,15 @@ import { useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Loader2 } from 'lucide-react';
-import { EthereumIcon, SolanaIcon } from './chain-icons';
+import { ChainIcon } from './chain-icons';
 import { WalletAccountModal } from './wallet-account-modal';
-import { getActiveChainByRelayId, type ActiveChain, type ActiveChainKey } from '@/config/active_chains';
+import {
+  getActiveChain,
+  getActiveChainByRelayId,
+  type ActiveChain,
+  type ActiveChainKey,
+} from '@/config/active_chains';
+import { ICON_SIZES_PX } from '@/config/ui_config';
 import { useActiveChains } from '@/lib/network/network-mode';
 
 const firstOfVm = (chains: ActiveChain[], vm: ActiveChain['vmType']): ActiveChain =>
@@ -21,7 +27,8 @@ function SolanaConnectPill() {
   const wallet = useWallet();
   const modal = useWalletModal();
   const [accountOpen, setAccountOpen] = useState(false);
-  const solanaChainKey = firstOfVm(useActiveChains(), 'svm').key; // devnet while Test Mode is ON
+  const solanaChain = firstOfVm(useActiveChains(), 'svm'); // devnet while Test Mode is ON
+  const solanaChainKey = solanaChain.key;
 
   if (wallet.connecting) {
     return (
@@ -45,7 +52,7 @@ function SolanaConnectPill() {
           onClick={() => setAccountOpen(true)}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
         >
-          <SolanaIcon className="w-3.5 h-3.5" />
+          <ChainIcon chain={solanaChain} size={ICON_SIZES_PX.walletChain} />
           <span className="hidden sm:inline">{shorten(address)}</span>
         </button>
         <WalletAccountModal
@@ -65,7 +72,7 @@ function SolanaConnectPill() {
       onClick={() => modal.setVisible(true)}
       className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-button text-white hover:shadow-[0_0_25px_rgba(74,108,247,0.25)] transition-shadow cursor-pointer"
     >
-      <SolanaIcon className="w-3.5 h-3.5" />
+      <ChainIcon chain={solanaChain} size={ICON_SIZES_PX.walletChain} />
       <span className="hidden sm:inline">Connect Solana</span>
     </button>
   );
@@ -80,7 +87,8 @@ function EvmConnectPill() {
   const [accountOpen, setAccountOpen] = useState(false);
   const { disconnectAsync } = useDisconnect();
   const chains = useActiveChains();
-  const fallbackEvm = firstOfVm(chains, 'evm').key;
+  const fallbackEvmChain = firstOfVm(chains, 'evm');
+  const fallbackEvm = fallbackEvmChain.key;
   // wagmi knows all four EVM chains; "wrong network" means outside this mode's set.
   const isModeChain = (id: number) => chains.some((c) => c.vmType === 'evm' && c.relayChainId === id);
 
@@ -95,7 +103,7 @@ function EvmConnectPill() {
               onClick={openConnectModal}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-button text-white hover:shadow-[0_0_25px_rgba(74,108,247,0.25)] transition-shadow cursor-pointer"
             >
-              <EthereumIcon className="w-3.5 h-3.5" />
+              <ChainIcon chain={fallbackEvmChain} size={ICON_SIZES_PX.walletChain} />
               <span className="hidden sm:inline">Connect EVM</span>
             </button>
           );
@@ -119,7 +127,10 @@ function EvmConnectPill() {
               onClick={() => setAccountOpen(true)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
             >
-              <EthereumIcon className="w-3.5 h-3.5" />
+              <ChainIcon
+                chain={getActiveChain(evmChainKey(chain.id, fallbackEvm))}
+                size={ICON_SIZES_PX.walletChain}
+              />
               <span className="hidden sm:inline">{shorten(account.address)}</span>
             </button>
             <WalletAccountModal

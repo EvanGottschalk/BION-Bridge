@@ -24,7 +24,8 @@ export type ActiveChain = {
   explorerUrl: string;
   explorerQuery?: string; // appended after the tx/account path (e.g. Solscan's devnet cluster flag)
   rpcUrls: string[];
-  iconKey: ChainIconKey;
+  iconKey: ChainIconKey; // built-in SVG, used if the image below fails to load
+  iconSymbol: string; // icon file in src/image/tokens (the chain's gas token), served via TOKEN_ICON_URL
   brandColor: string;
   nativeSymbol: string;
   nativeDecimals: number;
@@ -42,6 +43,7 @@ const MAINNET_CHAINS: ActiveChain[] = [
     explorerUrl: ETH_MAINNET.explorerUrl,
     rpcUrls: ETH_MAINNET.rpcUrls,
     iconKey: 'ethereum',
+    iconSymbol: 'ETH',
     brandColor: '#627EEA',
     nativeSymbol: 'ETH',
     nativeDecimals: 18,
@@ -57,6 +59,7 @@ const MAINNET_CHAINS: ActiveChain[] = [
     explorerUrl: BASE_MAINNET.explorerUrl,
     rpcUrls: BASE_MAINNET.rpcUrls,
     iconKey: 'base',
+    iconSymbol: 'BASE',
     brandColor: '#0052FF',
     nativeSymbol: 'ETH',
     nativeDecimals: 18,
@@ -72,6 +75,7 @@ const MAINNET_CHAINS: ActiveChain[] = [
     explorerUrl: SOLANA_MAINNET.explorerUrl,
     rpcUrls: SOLANA_MAINNET.rpcUrls,
     iconKey: 'solana',
+    iconSymbol: 'SOL',
     brandColor: '#9945FF',
     nativeSymbol: 'SOL',
     nativeDecimals: 9,
@@ -92,6 +96,7 @@ const TESTNET_CHAINS: ActiveChain[] = [
     explorerUrl: ETH_SEPOLIA.explorerUrl,
     rpcUrls: ETH_SEPOLIA.rpcUrls,
     iconKey: 'ethereum',
+    iconSymbol: 'ETH Test',
     brandColor: '#627EEA',
     nativeSymbol: 'ETH',
     nativeDecimals: 18,
@@ -107,6 +112,7 @@ const TESTNET_CHAINS: ActiveChain[] = [
     explorerUrl: BASE_SEPOLIA.explorerUrl,
     rpcUrls: BASE_SEPOLIA.rpcUrls,
     iconKey: 'base',
+    iconSymbol: 'BASE Test',
     brandColor: '#0052FF',
     nativeSymbol: 'ETH',
     nativeDecimals: 18,
@@ -123,6 +129,7 @@ const TESTNET_CHAINS: ActiveChain[] = [
     explorerQuery: SOLANA_DEVNET.explorerQuery,
     rpcUrls: SOLANA_DEVNET.rpcUrls,
     iconKey: 'solana',
+    iconSymbol: 'SOL Test',
     brandColor: '#9945FF',
     nativeSymbol: 'SOL',
     nativeDecimals: 9,

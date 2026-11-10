@@ -130,9 +130,21 @@ spinner.
 `ACTIVE_CHAINS` from `config/active_chains.ts`. To add or remove a chain from
 the UI, edit that array — nothing in this component needs to change.
 
-The icons come from `components/bridge/chain-icons.tsx`, which hard-codes SVG
-markup for Ethereum, Base, and Solana. They are picked by `iconKey`, so a new
-chain needs both an `ActiveChain` entry and a corresponding icon.
+Network icons are the chain's gas-token image. `ChainIcon`
+(`components/bridge/chain-icons.tsx`) loads `TOKEN_ICON_URL(chain.iconSymbol)`,
+i.e. `src/image/tokens/webp/64px/<iconSymbol>.webp`: `ETH`, `BASE`, `SOL` on
+mainnet and `ETH Test`, `BASE Test`, `SOL Test` on testnets. If the image fails
+to load it falls back to the built-in SVG picked by `iconKey`. It is used in the
+network dropdowns and the header wallet pills (Solana pill: the current mode's
+Solana chain; EVM pill: the connected chain, or the mode's first EVM chain
+before connecting). A new chain needs an `ActiveChain` entry with both fields
+and a webp icon in each size folder.
+
+Icon sizes live in `ICON_SIZES_PX` (`config/ui_config.ts`), in CSS pixels:
+`walletChain` (header wallet buttons), `dropdownChain` (network selectors and
+their lists), `dropdownToken` (open token list) and `dropdownTokenSelected`
+(closed token selector). `ChainIcon` and `TokenIcon` take a `size` prop and
+apply it as inline width/height.
 
 The selected-chain match is `find ... ?? ACTIVE_CHAINS[0]` so an unknown key
 falls back to the first chain instead of crashing.

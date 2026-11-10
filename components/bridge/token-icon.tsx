@@ -1,19 +1,21 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { TOKEN_ICON_URL, TOKEN_ICON_LOGO_DEV_URL } from '@/config/ui_config';
+import { ICON_SIZES_PX, TOKEN_ICON_URL, TOKEN_ICON_LOGO_DEV_URL } from '@/config/ui_config';
 
 type Source = 'local' | 'logodev' | 'remote' | 'placeholder';
 
 interface TokenIconProps {
   symbol: string;
   logoURI?: string;
+  size?: number; // CSS pixels; callers pass a value from ICON_SIZES_PX
   className?: string;
 }
 
-const defaultClass = 'w-7 h-7 rounded-full bg-white/10 shrink-0';
+const defaultClass = 'rounded-full bg-white/10 shrink-0';
 
-export function TokenIcon({ symbol, logoURI, className }: TokenIconProps) {
+export function TokenIcon({ symbol, logoURI, size = ICON_SIZES_PX.dropdownToken, className }: TokenIconProps) {
+  const style = { width: size, height: size };
   const logoDevUrl = useMemo(() => TOKEN_ICON_LOGO_DEV_URL(symbol), [symbol]);
 
   // Order of attempts: local file ⇒ logo.dev ⇒ Relay-supplied logoURI ⇒
@@ -38,6 +40,7 @@ export function TokenIcon({ symbol, logoURI, className }: TokenIconProps) {
   if (source === 'placeholder') {
     return (
       <div
+        style={style}
         className={`${cls} flex items-center justify-center text-[10px] font-semibold uppercase text-foreground/70`}
       >
         {symbol.slice(0, 3)}
@@ -57,8 +60,9 @@ export function TokenIcon({ symbol, logoURI, className }: TokenIconProps) {
     <img
       src={src}
       alt={symbol}
-      width={28}
-      height={28}
+      width={size}
+      height={size}
+      style={style}
       loading="lazy"
       className={`${cls} object-cover`}
       onError={() => setTierIndex((i) => Math.min(i + 1, order.length - 1))}

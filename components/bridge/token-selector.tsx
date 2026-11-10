@@ -15,7 +15,7 @@ import {
 import { getRelayApi } from '@/lib/relay/client';
 import type { RelayCurrency } from '@/lib/relay/types';
 import { isNttToken } from '@/lib/ntt/registry';
-import { NTT_TOKEN_BADGE } from '@/config/ui_config';
+import { ICON_SIZES_PX, NTT_TOKEN_BADGE } from '@/config/ui_config';
 import { TokenIcon } from './token-icon';
 import { useTokenBalance } from '@/hooks/use-token-balance';
 
@@ -55,7 +55,7 @@ const TokenRow = ({
       }`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <TokenIcon symbol={token.symbol} logoURI={token.logoURI} />
+        <TokenIcon symbol={token.symbol} logoURI={token.logoURI} size={ICON_SIZES_PX.dropdownToken} />
         <div className="flex flex-col min-w-0">
           <span className="flex items-center gap-1.5 min-w-0">
             <span className="font-medium leading-tight truncate">{token.symbol}</span>
@@ -175,7 +175,7 @@ export function TokenSelector({ label, chain, selected, onSelect, locked }: Toke
               <TokenIcon
                 symbol={selected.symbol}
                 logoURI={selected.logoURI}
-                className="w-6 h-6"
+                size={ICON_SIZES_PX.dropdownTokenSelected}
               />
               <div className="flex flex-col min-w-0 text-left">
                 <span className="flex items-center gap-1.5 min-w-0">

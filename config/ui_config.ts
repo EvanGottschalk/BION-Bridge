@@ -291,6 +291,16 @@ export const TOKEN_ICONS = {
   fileSize: '64px',
 };
 
+// On-screen icon sizes, in CSS pixels (width = height). Change these to make
+// icons bigger or smaller. Source images are 64px, so values up to ~32 stay
+// sharp on high-DPI screens; above that, switch TOKEN_ICONS.fileSize to '128px'.
+export const ICON_SIZES_PX = {
+  walletChain: 20, // chain icon in the EVM / Solana wallet buttons, top-right corner
+  dropdownChain: 36, // chain icons in the From / To network dropdowns (selected + list)
+  dropdownToken: 36, // token icons in the open token dropdown list
+  dropdownTokenSelected: 36, // token icon shown in the closed token selector
+} as const;
+
 export const WALLET_MODAL_COPY = {
   copyAddress: 'Copy Address',
   copyAddressDone: 'Copied!',

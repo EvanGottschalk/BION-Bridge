@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { ActiveChain, ActiveChainKey } from '@/config/active_chains';
+import { ICON_SIZES_PX } from '@/config/ui_config';
 import { ChainIcon } from './chain-icons';
 
 interface ChainSelectorProps {
@@ -50,7 +51,7 @@ export function ChainSelector({
           className="w-full flex items-center justify-between gap-3 bg-[#0c0e1e] rounded-lg px-4 py-3 border border-white/15 hover:border-white/30 transition-all duration-200 cursor-pointer group"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <ChainIcon chainKey={selected.iconKey} />
+            <ChainIcon chain={selected} size={ICON_SIZES_PX.dropdownChain} />
             <span className="text-foreground font-medium truncate">{selected.displayName}</span>
           </div>
           <ChevronDown
@@ -86,7 +87,7 @@ export function ChainSelector({
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <ChainIcon chainKey={chain.iconKey} />
+                    <ChainIcon chain={chain} size={ICON_SIZES_PX.dropdownChain} />
                     <span className="font-medium truncate">{chain.displayName}</span>
                   </div>
                 </button>
