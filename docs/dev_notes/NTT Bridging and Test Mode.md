@@ -100,6 +100,12 @@ BridgeCard ── useBridgeQuote ── router.selectProviderId(route) ── 'r
 
 No code changes are needed.
 
+5. Add an icon: `TokenIcon` loads `/token-icon/<symbol>` from `src/image/tokens/webp/64px/<symbol>.webp` (exact symbol casing). Keep 128px/256px copies alongside, like the other icons.
+
+**Current deployments** (both Testnet, Solana Devnet ⇄ Base Sepolia, 9 decimals, Solana is the locking hub and Base the burning spoke):
+- `BRDGTST` (Bridge Test 48).
+- `tBION` (Test BION), added 2026-11-10. Solana mint `6TgX…ZPST` (Token-2022), manager `2dwv…LR8f`; Base token `0x6746…525f`, manager `0xfdde…9267`, transceiver `0x8fc2…40a9`.
+
 ## 5. Known caveats
 
 - The Wormhole SDK pins `@wormhole-foundation/sdk-*` to exactly `6.1.4`. Upgrade all `@wormhole-foundation/*` packages together.

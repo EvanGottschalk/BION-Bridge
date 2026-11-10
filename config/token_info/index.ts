@@ -75,8 +75,8 @@ export const FEATURED_TOKENS_BY_CHAIN: Record<ActiveChainKey, string[]> = {
   base: ['ETH', 'USDC', 'WETH', 'CBETH', 'DAI', 'WBTC'],
   solana: ['SOL', 'USDC', 'USDT', 'WSOL', 'WETH', 'WBTC'],
   sepolia: ['ETH', 'USDC', 'WETH', 'DAI'],
-  baseSepolia: ['ETH', 'BRDGTST', 'USDC', 'WETH'],
-  solanaDevnet: ['SOL', 'BRDGTST'],
+  baseSepolia: ['ETH', 'tBION', 'BRDGTST', 'USDC', 'WETH'],
+  solanaDevnet: ['SOL', 'tBION', 'BRDGTST'],
 };
 
 export const getTokenList = (chain: ActiveChainKey): TokenInfo[] =>

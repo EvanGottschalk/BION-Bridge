@@ -148,4 +148,21 @@ export const NTT_BRIDGE_INFO: Record<string, NttDeployment> = { // tokens bridge
       },
     },
   },
+  tBION: {
+    network: 'Testnet', // Wormhole network the deployment lives on; only offered while Test Mode is ON
+    chains: {
+      [CHAINS.SOLANA_DEVNET]: {
+        tokenContractAddress: '6TgXeZhP4Z5WVCMAbVPN35YbcBFh8sk2jqzZstXDZPST', // Token-2022 mint, 9 decimals
+        NTTcontractAddress: '2dwv7j7DFABCgMCKxQ79kgAfjea35W8P2qBcHHAoLR8f', // NTT manager program
+        NTTtransceiverAddress: '2dwv7j7DFABCgMCKxQ79kgAfjea35W8P2qBcHHAoLR8f', // Solana NTT embeds the Wormhole transceiver in the manager program
+        mode: 'locking', // hub; on-chain config mode 0, tokens held in custody HMzNwcsWqdpDLohAoB8n6Do1prNr5J3rz5awpFQdmQy6
+      },
+      [CHAINS.BASE_SEPOLIA]: {
+        tokenContractAddress: '0x67462E782B0953153FEA009ef9a2b6eB7d97525f', // ERC-20, 9 decimals
+        NTTcontractAddress: '0xfdde63335358ec5a19Fec2147Ff612fa820A9267', // NttManager v2.0.0
+        NTTtransceiverAddress: '0x8fc292677Fc6A9fb017a78DBae1f1702EcE840a9', // WormholeTransceiver, read from NttManager.getTransceivers()
+        mode: 'burning', // spoke; NttManager.getMode() === 1, mints on inbound and burns on outbound
+      },
+    },
+  },
 };
