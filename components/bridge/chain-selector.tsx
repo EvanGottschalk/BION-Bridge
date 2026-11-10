@@ -40,7 +40,7 @@ export function ChainSelector({
   const selected = chains.find((c) => c.key === selectedChain) ?? chains[0];
 
   return (
-    <div className="flex flex-col gap-2" ref={ref}>
+    <div className="flex flex-col gap-2" ref={ref} data-dropdown-open={open ? '' : undefined}>
       <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
         {label}
       </span>

@@ -157,7 +157,11 @@ export function TokenSelector({ label, chain, selected, onSelect, locked }: Toke
   }, [remote, full]);
 
   return (
-    <div className="flex flex-col gap-2" ref={containerRef}>
+    <div
+      className="flex flex-col gap-2"
+      ref={containerRef}
+      data-dropdown-open={open && !locked ? '' : undefined}
+    >
       <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
         {label}
       </span>

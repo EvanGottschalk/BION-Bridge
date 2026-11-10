@@ -149,6 +149,15 @@ apply it as inline width/height.
 The selected-chain match is `find ... ?? ACTIVE_CHAINS[0]` so an unknown key
 falls back to the first chain instead of crashing.
 
+**Dropdowns must not be clipped.** The bridge card has no `overflow-hidden`
+(its top glow line is clipped by its own inner layer instead). Glass panels use
+`backdrop-filter`, which makes each one its own stacking context, so an open
+dropdown could still be painted over by later panels. To prevent that, the chain
+and token selectors set `data-dropdown-open` on their root while open, and the
+card and both From/To panels carry `has-[[data-dropdown-open]]:z-30`, which
+lifts whichever one holds the open list. Keep both in place when adding new
+dropdowns inside the card.
+
 ### 3.2 TokenSelector
 
 `components/bridge/token-selector.tsx` is more involved. Per chain it shows:
@@ -273,8 +282,12 @@ indexer-backed feed lands, add a `'live'` display mode and a number source.
 
 ## 8. Wallet account modal
 
-`components/bridge/wallet-account-modal.tsx` is the modal that opens when the
-user clicks a connected pill. It shows the truncated address, the native
+`components/bridge/wallet-account-modal.tsx` is the account menu that **drops
+down from** a connected pill (no centered overlay). Clicking the pill toggles
+it; a click/tap outside the pill + menu, or Escape, closes it. On `sm`+ it is
+right-aligned under the pill (`w-72`); on phones the pill wrapper is not
+positioned, so the menu anchors to the header and spans it with 16px gutters.
+It shows the truncated address, the native
 balance on that chain (via `useTokenBalance`), a "Copy Address" button with a
 ~1.6 s feedback animation (`WALLET_COPY_FEEDBACK_MS`), and a "Disconnect"
 button. The connect-pill components in `connect-button.tsx` own this modal's

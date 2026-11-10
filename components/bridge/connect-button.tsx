@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
 import { useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -27,6 +27,8 @@ function SolanaConnectPill() {
   const wallet = useWallet();
   const modal = useWalletModal();
   const [accountOpen, setAccountOpen] = useState(false);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const closeAccount = useCallback(() => setAccountOpen(false), []);
   const solanaChain = firstOfVm(useActiveChains(), 'svm'); // devnet while Test Mode is ON
   const solanaChainKey = solanaChain.key;
 
@@ -46,10 +48,11 @@ function SolanaConnectPill() {
   if (wallet.connected && wallet.publicKey) {
     const address = wallet.publicKey.toBase58();
     return (
-      <>
+      <div ref={anchorRef} className="sm:relative">
         <button
           type="button"
-          onClick={() => setAccountOpen(true)}
+          onClick={() => setAccountOpen((v) => !v)}
+          aria-expanded={accountOpen}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
         >
           <ChainIcon chain={solanaChain} size={ICON_SIZES_PX.walletChain} />
@@ -59,10 +62,11 @@ function SolanaConnectPill() {
           open={accountOpen}
           address={address}
           chainKey={solanaChainKey}
-          onClose={() => setAccountOpen(false)}
+          anchorRef={anchorRef}
+          onClose={closeAccount}
           onDisconnect={() => wallet.disconnect().catch(() => {})}
         />
-      </>
+      </div>
     );
   }
 
@@ -85,6 +89,8 @@ function evmChainKey(chainId: number | undefined, fallback: ActiveChainKey): Act
 
 function EvmConnectPill() {
   const [accountOpen, setAccountOpen] = useState(false);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const closeAccount = useCallback(() => setAccountOpen(false), []);
   const { disconnectAsync } = useDisconnect();
   const chains = useActiveChains();
   const fallbackEvmChain = firstOfVm(chains, 'evm');
@@ -121,10 +127,11 @@ function EvmConnectPill() {
           );
         }
         return (
-          <>
+          <div ref={anchorRef} className="sm:relative">
             <button
               type="button"
-              onClick={() => setAccountOpen(true)}
+              onClick={() => setAccountOpen((v) => !v)}
+              aria-expanded={accountOpen}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium glass-panel text-primary border border-primary/30 hover:border-primary/60 transition-colors cursor-pointer"
             >
               <ChainIcon
@@ -137,10 +144,11 @@ function EvmConnectPill() {
               open={accountOpen}
               address={account.address}
               chainKey={evmChainKey(chain.id, fallbackEvm)}
-              onClose={() => setAccountOpen(false)}
+              anchorRef={anchorRef}
+              onClose={closeAccount}
               onDisconnect={() => disconnectAsync().catch(() => {})}
             />
-          </>
+          </div>
         );
       }}
     </RainbowConnectButton.Custom>

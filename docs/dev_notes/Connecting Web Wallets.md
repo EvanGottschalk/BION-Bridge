@@ -253,7 +253,10 @@ Both pills render the address through a `shorten` helper:
 
 ## 8. WalletAccountModal
 
-`components/bridge/wallet-account-modal.tsx` is shared between both VMs.
+`components/bridge/wallet-account-modal.tsx` is shared between both VMs. It is
+a dropdown menu under the pill, not a centered modal (see `Bridge UI.md` §8).
+Each pill wraps its button and the menu in an `sm:relative` div and passes that
+div as `anchorRef`, which the menu uses for outside-click detection.
 Props are flat strings — `address: string`, `chainKey: ActiveChainKey`,
 `onDisconnect: () => void | Promise<void>` — so it doesn't depend on either
 wallet library. It reads the native balance via `useTokenBalance(chainKey,

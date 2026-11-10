@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Wallet, Copy, LogOut, X, Check } from 'lucide-react';
+import { useEffect, useState, type RefObject } from 'react';
+import { Wallet, Copy, LogOut, Check } from 'lucide-react';
 import { useTokenBalance } from '@/hooks/use-token-balance';
 import { getNativeToken } from '@/config/token_info';
 import { type ActiveChainKey } from '@/config/active_chains';
@@ -11,9 +11,15 @@ interface WalletAccountModalProps {
   open: boolean;
   address: string;
   chainKey: ActiveChainKey;
+  // Wrapper around the wallet button + this menu. It is `sm:relative`, so on
+  // phones the menu anchors to the header and spans it with 16px gutters.
+  anchorRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onDisconnect: () => void | Promise<void>;
 }
+
+// Account menu that drops down from the wallet button in the header (not a
+// centered modal): address, native balance, copy and disconnect.
 
 const shorten = (addr: string): string =>
   addr.length <= 12 ? addr : `${addr.slice(0, 5)}…${addr.slice(-4)}`;
@@ -22,6 +28,7 @@ export function WalletAccountModal({
   open,
   address,
   chainKey,
+  anchorRef,
   onClose,
   onDisconnect,
 }: WalletAccountModalProps) {
@@ -38,6 +45,25 @@ export function WalletAccountModal({
     const id = setTimeout(() => setCopied(false), WALLET_COPY_FEEDBACK_MS);
     return () => clearTimeout(id);
   }, [copied]);
+
+  // Close on a click/tap outside the anchor (the wallet button + this menu) or on Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: MouseEvent | TouchEvent) => {
+      if (anchorRef.current && !anchorRef.current.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('touchstart', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('touchstart', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, anchorRef, onClose]);
 
   if (!open) return null;
 
@@ -60,43 +86,28 @@ export function WalletAccountModal({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[110] flex items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={onClose}
+      role="menu"
+      className="absolute top-full mt-2 left-4 right-4 sm:left-auto sm:right-0 sm:w-72 z-[110] bg-[#0c0e1e] border border-white/15 rounded-2xl p-4 shadow-xl shadow-black/40 animate-in fade-in slide-in-from-top-2 duration-150"
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm glass-card rounded-2xl p-6 relative animate-in zoom-in-95 duration-150"
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={WALLET_MODAL_COPY.close}
-          className="absolute top-4 right-4 w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center cursor-pointer"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="flex flex-col items-center gap-3 mt-2">
-          <div className="w-16 h-16 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
-            <Wallet className="w-7 h-7 text-primary" />
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 shrink-0 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
+            <Wallet className="w-5 h-5 text-primary" />
           </div>
-
-          <div className="text-foreground text-lg font-semibold tabular-nums">
-            {shorten(address)}
-          </div>
-
-          <div className="text-muted-foreground text-xs tabular-nums min-h-[16px]">
-            {balance.loading
-              ? '…'
-              : balance.formatted !== null
-                ? `${balance.formatted} ${nativeToken.symbol}`
-                : ''}
+          <div className="min-w-0">
+            <div className="text-foreground text-sm font-semibold tabular-nums truncate">
+              {shorten(address)}
+            </div>
+            <div className="text-muted-foreground text-xs tabular-nums min-h-[16px] truncate">
+              {balance.loading
+                ? '…'
+                : balance.formatted !== null
+                  ? `${balance.formatted} ${nativeToken.symbol}`
+                  : ''}
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mt-5">
+        <div className="grid grid-cols-2 gap-2 mt-4">
           <button
             type="button"
             onClick={handleCopy}
@@ -123,7 +134,6 @@ export function WalletAccountModal({
             </span>
           </button>
         </div>
-      </div>
     </div>
   );
 }

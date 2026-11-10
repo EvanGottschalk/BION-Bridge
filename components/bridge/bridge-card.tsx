@@ -471,8 +471,12 @@ export function BridgeCard() {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <div className="relative glass-card rounded-2xl overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-px bg-primary shadow-[0_0_30px_8px_rgba(74,108,247,0.25)]" />
+      {/* No overflow-hidden here, so open dropdowns can extend past the card;
+          any element holding [data-dropdown-open] lifts the card above later content. */}
+      <div className="relative glass-card rounded-2xl has-[[data-dropdown-open]]:z-30">
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-px bg-primary shadow-[0_0_30px_8px_rgba(74,108,247,0.25)]" />
+        </div>
 
         <div className="p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-4 sm:mb-6">
@@ -516,7 +520,7 @@ export function BridgeCard() {
           )}
 
           <div className="flex flex-col md:flex-row items-stretch gap-3">
-            <div className="flex-1 min-w-0 glass-panel rounded-xl p-4 space-y-4">
+            <div className="relative flex-1 min-w-0 glass-panel rounded-xl p-4 space-y-4 has-[[data-dropdown-open]]:z-30">
               <ChainSelector
                 label={BRIDGE_CARD_COPY.fromLabel}
                 chains={chains}
@@ -579,7 +583,7 @@ export function BridgeCard() {
               </button>
             </div>
 
-            <div className="flex-1 min-w-0 glass-panel rounded-xl p-4 space-y-4">
+            <div className="relative flex-1 min-w-0 glass-panel rounded-xl p-4 space-y-4 has-[[data-dropdown-open]]:z-30">
               <ChainSelector
                 label={BRIDGE_CARD_COPY.toLabel}
                 chains={chains}
