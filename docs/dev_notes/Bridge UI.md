@@ -287,6 +287,9 @@ down from** a connected pill (no centered overlay). Clicking the pill toggles
 it; a click/tap outside the pill + menu, or Escape, closes it. On `sm`+ it is
 right-aligned under the pill (`w-72`); on phones the pill wrapper is not
 positioned, so the menu anchors to the header and spans it with 16px gutters.
+Clicking the **wallet icon** copies the address (it briefly turns into a check
+mark), and clicking the **address** opens the wallet on that chain's explorer in
+a new tab (`buildExplorerAddressUrl`, so Solana Devnet gets `?cluster=devnet`).
 It shows the truncated address, the native
 balance on that chain (via `useTokenBalance`), a "Copy Address" button with a
 ~1.6 s feedback animation (`WALLET_COPY_FEEDBACK_MS`), and a "Disconnect"

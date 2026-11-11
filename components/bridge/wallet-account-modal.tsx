@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, type RefObject } from 'react';
-import { Wallet, Copy, LogOut, Check } from 'lucide-react';
+import { Wallet, Copy, LogOut, Check, ExternalLink } from 'lucide-react';
 import { useTokenBalance } from '@/hooks/use-token-balance';
 import { getNativeToken } from '@/config/token_info';
-import { type ActiveChainKey } from '@/config/active_chains';
+import { buildExplorerAddressUrl, type ActiveChainKey } from '@/config/active_chains';
 import { WALLET_MODAL_COPY, WALLET_COPY_FEEDBACK_MS } from '@/config/ui_config';
 
 interface WalletAccountModalProps {
@@ -90,13 +90,33 @@ export function WalletAccountModal({
       className="absolute top-full mt-2 left-4 right-4 sm:left-auto sm:right-0 sm:w-72 z-[110] bg-[#0c0e1e] border border-white/15 rounded-2xl p-4 shadow-xl shadow-black/40 animate-in fade-in slide-in-from-top-2 duration-150"
     >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 shrink-0 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
-            <Wallet className="w-5 h-5 text-primary" />
-          </div>
+          {/* Wallet icon copies the address, like the Copy Address button. */}
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label={WALLET_MODAL_COPY.copyAddress}
+            title={copied ? WALLET_MODAL_COPY.copyAddressDone : WALLET_MODAL_COPY.copyAddress}
+            className="w-10 h-10 shrink-0 rounded-full bg-primary/15 border border-primary/30 hover:border-primary/60 hover:bg-primary/25 transition-colors flex items-center justify-center cursor-pointer"
+          >
+            {copied ? (
+              <Check className="w-5 h-5 text-emerald-400" />
+            ) : (
+              <Wallet className="w-5 h-5 text-primary" />
+            )}
+          </button>
           <div className="min-w-0">
-            <div className="text-foreground text-sm font-semibold tabular-nums truncate">
-              {shorten(address)}
-            </div>
+            {/* Address opens this wallet on the chain's explorer in a new tab. */}
+            <a
+              href={buildExplorerAddressUrl(chainKey, address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={WALLET_MODAL_COPY.viewOnExplorer}
+              title={WALLET_MODAL_COPY.viewOnExplorer}
+              className="flex items-center gap-1 text-foreground text-sm font-semibold tabular-nums hover:text-primary transition-colors min-w-0"
+            >
+              <span className="truncate">{shorten(address)}</span>
+              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+            </a>
             <div className="text-muted-foreground text-xs tabular-nums min-h-[16px] truncate">
               {balance.loading
                 ? '…'

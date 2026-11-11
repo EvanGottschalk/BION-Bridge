@@ -306,6 +306,7 @@ export const WALLET_MODAL_COPY = {
   copyAddressDone: 'Copied!',
   disconnect: 'Disconnect',
   close: 'Close',
+  viewOnExplorer: 'View wallet on explorer', // tooltip / aria-label on the address link
 } as const;
 
 export const WALLET_COPY_FEEDBACK_MS = 1600;
