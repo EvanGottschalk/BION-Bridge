@@ -170,3 +170,175 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
+
+/* ── Faucet v1 (components/faucet/v1) ─────────────────────────────────────
+   Colors come from config/faucet_config.ts via SVG attributes or CSS vars;
+   these rules only move things. Phase timings arrive as --faucet-* vars. */
+
+@keyframes faucet-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+@keyframes faucet-trace {
+  0%, 100% { opacity: 0.5; }
+  45% { opacity: 1; }
+  50% { opacity: 0.3; }
+  55% { opacity: 0.9; }
+}
+@keyframes faucet-mote {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 0.8; }
+  100% { transform: translate(24px, -140px); opacity: 0; }
+}
+@keyframes faucet-flow {
+  to { stroke-dashoffset: -36; }
+}
+@keyframes faucet-idle-drip {
+  0% { transform: scale(0); opacity: 0; }
+  55% { transform: scale(1); opacity: 1; }
+  80% { transform: translateY(46px) scale(0.8); opacity: 0; }
+  100% { transform: translateY(46px) scale(0); opacity: 0; }
+}
+@keyframes faucet-drop-charge {
+  0% { transform: scale(0.05); opacity: 0; }
+  20% { opacity: 1; }
+  70% { transform: scale(1.06, 0.94); opacity: 1; }
+  85% { transform: scale(0.97, 1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes faucet-drop-fall {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(var(--faucet-fall-distance)) scale(0.82, 1.22); opacity: 1; }
+}
+@keyframes faucet-wallet-pop {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.07, 0.93); }
+  55% { transform: scale(0.97, 1.04); }
+  100% { transform: scale(1); }
+}
+@keyframes faucet-wallet-fill {
+  0% { transform: scaleY(0); opacity: 0; }
+  30% { transform: scaleY(0.7); opacity: 0.6; }
+  100% { transform: scaleY(0.35); opacity: 0.25; }
+}
+@keyframes faucet-fade-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes faucet-halo {
+  0% { opacity: 0.4; }
+  25% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+@keyframes faucet-ripple {
+  0% { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(3.4); opacity: 0; }
+}
+@keyframes faucet-particle {
+  0% { transform: translate(0, 0); opacity: 1; }
+  55% { transform: translate(calc(var(--dx) * 0.8), var(--dy)); opacity: 1; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 26px)); opacity: 0; }
+}
+@keyframes faucet-amount {
+  0% { transform: translateY(12px); opacity: 0; }
+  18% { transform: translateY(0); opacity: 1; }
+  75% { transform: translateY(-12px); opacity: 1; }
+  100% { transform: translateY(-20px); opacity: 0; }
+}
+@keyframes faucet-talk {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 18px 2px var(--faucet-glow); }
+}
+@keyframes faucet-caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Ambient forest */
+.faucet-node { animation: faucet-pulse 3.2s ease-in-out infinite; }
+.faucet-trace { animation: faucet-trace 7s ease-in-out infinite; }
+.faucet-mote {
+  animation-name: faucet-mote;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Scene: shared transform setup */
+.faucet-scene .faucet-drop,
+.faucet-scene .faucet-wallet,
+.faucet-scene .faucet-wallet-fill,
+.faucet-scene .faucet-ripple,
+.faucet-scene .faucet-amount { transform-box: fill-box; }
+.faucet-scene .faucet-drop { transform-origin: 50% 0; opacity: 0; }
+.faucet-scene .faucet-wallet { transform-origin: 50% 100%; }
+.faucet-scene .faucet-wallet-fill { transform-origin: 50% 100%; opacity: 0; }
+.faucet-scene .faucet-ripple { transform-origin: 50% 50%; opacity: 0; }
+.faucet-scene .faucet-splash-particle,
+.faucet-scene .faucet-amount,
+.faucet-scene .faucet-wallet-flash { opacity: 0; }
+.faucet-scene .faucet-wallet-halo { opacity: 0.4; }
+
+/* Valve wheel opens on claim and closes again afterwards */
+.faucet-scene .faucet-wheel { transition: transform 700ms cubic-bezier(0.4, 0, 0.2, 1); }
+.faucet-scene:is([data-phase="turning"], [data-phase="charging"], [data-phase="falling"], [data-phase="splash"]) .faucet-wheel {
+  transform: rotate(-300deg);
+  transition-duration: var(--faucet-turning);
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+.faucet-scene .faucet-wheel-ring { opacity: 0.35; transition: opacity 400ms ease; }
+.faucet-scene:is([data-phase="turning"], [data-phase="charging"], [data-phase="falling"]) .faucet-wheel-ring { opacity: 1; }
+
+/* Energy channel lights up and flows while the valve is open */
+.faucet-scene .faucet-channel { opacity: 0.15; transition: opacity 400ms ease; }
+.faucet-scene:is([data-phase="turning"], [data-phase="charging"], [data-phase="falling"]) .faucet-channel {
+  opacity: 1;
+  animation: faucet-flow 0.45s linear infinite;
+}
+.faucet-scene .faucet-nozzle-lip { animation: faucet-pulse 2.4s ease-in-out infinite; }
+.faucet-scene[data-phase="charging"] .faucet-nozzle-lip { animation-duration: 0.5s; }
+
+/* Idle drip only while nothing else is happening */
+.faucet-scene .faucet-idle-drip { opacity: 0; transform-box: fill-box; transform-origin: 50% 0; }
+.faucet-scene:is([data-phase="idle"], [data-phase="done"]) .faucet-idle-drip {
+  animation: faucet-idle-drip 3.6s ease-in 1.2s infinite;
+}
+
+/* The big drop */
+.faucet-scene[data-phase="charging"] .faucet-drop {
+  animation: faucet-drop-charge var(--faucet-charging) cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+.faucet-scene[data-phase="falling"] .faucet-drop {
+  animation: faucet-drop-fall var(--faucet-falling) cubic-bezier(0.55, 0, 1, 0.45) both;
+}
+
+/* Impact */
+.faucet-scene[data-phase="splash"] .faucet-wallet { animation: faucet-wallet-pop 600ms ease-out both; }
+.faucet-scene[data-phase="splash"] .faucet-wallet-fill { animation: faucet-wallet-fill var(--faucet-splash) ease-out both; }
+.faucet-scene[data-phase="done"] .faucet-wallet-fill { opacity: 0.25; transform: scaleY(0.35); }
+.faucet-scene[data-phase="splash"] .faucet-wallet-flash { animation: faucet-fade-out var(--faucet-splash) ease-out both; }
+.faucet-scene[data-phase="splash"] .faucet-wallet-halo { animation: faucet-halo var(--faucet-splash) ease-out both; }
+.faucet-scene[data-phase="done"] .faucet-wallet-halo { opacity: 0.6; }
+.faucet-scene[data-phase="splash"] .faucet-ripple { animation: faucet-ripple 900ms ease-out both; }
+.faucet-scene[data-phase="splash"] .faucet-splash-particle {
+  animation: faucet-particle 800ms cubic-bezier(0.2, 0.7, 0.4, 1) both;
+}
+.faucet-scene[data-phase="splash"] .faucet-amount { animation: faucet-amount var(--faucet-splash) ease-out both; }
+
+/* Dorothy's dialogue */
+.faucet-portrait.is-speaking { animation: faucet-talk 0.9s ease-in-out infinite; }
+.faucet-caret { animation: faucet-caret 0.8s steps(1) infinite; }
+.faucet-claim-button:not(:disabled):hover { filter: brightness(1.12); transform: translateY(-1px); }
+.faucet-claim-button:not(:disabled):active { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .faucet-mote,
+  .faucet-node,
+  .faucet-trace,
+  .faucet-scene *,
+  .faucet-portrait,
+  .faucet-caret {
+    animation: none !important;
+    transition: none !important;
+  }
+}
