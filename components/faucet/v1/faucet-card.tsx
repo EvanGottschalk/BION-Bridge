@@ -54,15 +54,28 @@ const CONTROLS_STYLE = {
       FAUCET_CONTROLS_OPACITY.tokenListHighlight
     ),
   } as CSSProperties,
-  claimButton: {
+} satisfies Record<string, CSSProperties>;
+
+// The disabled fade is applied to the fill and the label separately, never as
+// `opacity` on the button itself: element opacity would also fade the blurred
+// backdrop, letting the sharp forest show through and hiding the blur.
+function claimButtonStyle(disabled: boolean): CSSProperties {
+  const fade = disabled ? FAUCET_CONTROLS_OPACITY.claimButtonDisabled : 1;
+  const fill = FAUCET_CONTROLS_OPACITY.claimButton * fade;
+  const backdrop = blur(
+    disabled ? FAUCET_CONTROLS_BLUR_PX.claimButtonDisabled : FAUCET_CONTROLS_BLUR_PX.claimButton
+  );
+  return {
     background: `linear-gradient(135deg, ${withOpacity(
       FAUCET_CONTROLS_COLORS.claimButtonFrom,
-      FAUCET_CONTROLS_OPACITY.claimButton
-    )}, ${withOpacity(FAUCET_CONTROLS_COLORS.claimButtonTo, FAUCET_CONTROLS_OPACITY.claimButton)})`,
+      fill
+    )}, ${withOpacity(FAUCET_CONTROLS_COLORS.claimButtonTo, fill)})`,
     color: FAUCET_COLORS.buttonText,
-    boxShadow: `0 6px 28px ${FAUCET_COLORS.energySoft}`,
-  },
-} satisfies Record<string, CSSProperties>;
+    boxShadow: disabled ? 'none' : `0 6px 28px ${FAUCET_COLORS.energySoft}`,
+    backdropFilter: backdrop,
+    WebkitBackdropFilter: backdrop,
+  };
+}
 
 const sleep =(ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -251,13 +264,15 @@ export function FaucetCard() {
             onClick={button.onClick}
             disabled={button.disabled}
             className="faucet-claim-button h-14 md:w-56 lg:w-full shrink-0 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed cursor-pointer"
-            style={{
-              ...CONTROLS_STYLE.claimButton,
-              opacity: button.disabled ? FAUCET_CONTROLS_OPACITY.claimButtonDisabled : 1,
-            }}
+            style={claimButtonStyle(button.disabled)}
           >
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            {button.label}
+            <span
+              className="flex items-center justify-center gap-2"
+              style={{ opacity: button.disabled ? FAUCET_CONTROLS_OPACITY.claimButtonDisabled : 1 }}
+            >
+              {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+              {button.label}
+            </span>
           </button>
         </div>
       </div>

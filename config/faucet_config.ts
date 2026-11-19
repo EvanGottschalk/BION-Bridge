@@ -71,16 +71,16 @@ export interface FaucetToken {
 }
 
 export const FAUCET_TOKENS: readonly FaucetToken[] = [
-  {
-    id: 'tbion-base-sepolia',
-    symbol: baseSepoliaTokens.TBION.symbol,
-    name: baseSepoliaTokens.TBION.name,
-    iconSymbol: 'tBION',
-    network: 'Base Sepolia',
-    vm: 'evm',
-    address: baseSepoliaTokens.TBION.address,
-    amount: '100',
-  },
+  // {
+  //   id: 'tbion-base-sepolia',
+  //   symbol: baseSepoliaTokens.TBION.symbol,
+  //   name: baseSepoliaTokens.TBION.name,
+  //   iconSymbol: 'tBION',
+  //   network: 'Base Sepolia',
+  //   vm: 'evm',
+  //   address: baseSepoliaTokens.TBION.address,
+  //   amount: '100',
+  // },
   {
     id: 'tbion-solana-devnet',
     symbol: solanaDevnetTokens.TBION.symbol,
@@ -89,27 +89,37 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
     network: 'Solana Devnet',
     vm: 'svm',
     address: solanaDevnetTokens.TBION.address,
-    amount: '100',
+    amount: '9999',
   },
+  // {
+  //   id: 'brdgtst-base-sepolia',
+  //   symbol: baseSepoliaTokens.BRDGTST.symbol,
+  //   name: baseSepoliaTokens.BRDGTST.name,
+  //   iconSymbol: 'BRDGTST',
+  //   network: 'Base Sepolia',
+  //   vm: 'evm',
+  //   address: baseSepoliaTokens.BRDGTST.address,
+  //   amount: '50',
+  // },
+  // {
+  //   id: 'brdgtst-solana-devnet',
+  //   symbol: solanaDevnetTokens.BRDGTST.symbol,
+  //   name: solanaDevnetTokens.BRDGTST.name,
+  //   iconSymbol: 'BRDGTST',
+  //   network: 'Solana Devnet',
+  //   vm: 'svm',
+  //   address: solanaDevnetTokens.BRDGTST.address,
+  //   amount: '50',
+  // },
   {
-    id: 'brdgtst-base-sepolia',
-    symbol: baseSepoliaTokens.BRDGTST.symbol,
-    name: baseSepoliaTokens.BRDGTST.name,
-    iconSymbol: 'BRDGTST',
-    network: 'Base Sepolia',
-    vm: 'evm',
-    address: baseSepoliaTokens.BRDGTST.address,
-    amount: '50',
-  },
-  {
-    id: 'brdgtst-solana-devnet',
-    symbol: solanaDevnetTokens.BRDGTST.symbol,
-    name: solanaDevnetTokens.BRDGTST.name,
-    iconSymbol: 'BRDGTST',
+    id: 'sol-devnet',
+    symbol: 'SOL',
+    name: 'Devnet SOL',
+    iconSymbol: 'SOL Test',
     network: 'Solana Devnet',
     vm: 'svm',
-    address: solanaDevnetTokens.BRDGTST.address,
-    amount: '50',
+    address: 'native',
+    amount: '1',
   },
   {
     id: 'eth-sepolia',
@@ -120,16 +130,6 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
     vm: 'evm',
     address: 'native',
     amount: '0.05',
-  },
-  {
-    id: 'sol-devnet',
-    symbol: 'SOL',
-    name: 'Devnet SOL',
-    iconSymbol: 'SOL Test',
-    network: 'Solana Devnet',
-    vm: 'svm',
-    address: 'native',
-    amount: '1',
   },
 ] as const;
 
@@ -149,8 +149,8 @@ export const FAUCET_TIMING_MS = {
 export const FAUCET_TYPEWRITER_MS_PER_CHAR = 22;
 
 export const FAUCET_ICON_SIZE_PX = {
-  selectList: 28,
-  selectTrigger: 28,
+  selectList: 40,
+  selectTrigger: 40,
 } as const;
 
 // Liquid digital energy + cyber-forest palette.
@@ -191,8 +191,8 @@ export const FAUCET_CONTROLS_OPACITY = {
   tokenSelect: 0.6, // the "Choose a token" rectangle
   tokenList: 0.92, // the dropdown list that opens from "Choose a token"
   tokenListHighlight: 0.15, // the hovered / focused row inside that list
-  claimButton: 0.75, // the "Claim Tokens" rectangle's fill
-  claimButtonDisabled: 0.4, // the whole "Claim Tokens" button (text included) while it can't be pressed
+  claimButton: 0.9, // the "Claim Tokens" rectangle's fill
+  claimButtonDisabled: 0.45, // the whole "Claim Tokens" button (text included) while it can't be pressed
 } as const;
 
 // Solid base colors (hex) that the opacities above are applied to.
@@ -205,12 +205,19 @@ export const FAUCET_CONTROLS_COLORS = {
   claimButtonTo: '#14A8E8', // right edge of the button gradient
 } as const;
 
-// Frosted-glass blur behind the panel and the dropdown list, in px (0 = none).
-// With a low opacity and some blur, the forest shows through but softened.
+// Frosted-glass blur behind each element of the token-select box, in px
+// (0 = none). With a low opacity and some blur, the forest shows through but
+// softened. Blur only shows where something sharp is visible behind the
+// element: the button and "Choose a token" sit on the panel, so a high
+// FAUCET_CONTROLS_OPACITY.panel hides the forest and leaves little to blur.
+// Lower the panel opacity to see their blur. Also, if `panel` blur here is
+// above 0, the elements inside it can only blur the panel's own background.
 export const FAUCET_CONTROLS_BLUR_PX = {
-  panel: 20,
-  tokenSelect: 8,
+  panel: 0,
+  tokenSelect: 24,
   tokenList: 24,
+  claimButton: 24, // "Claim Tokens" while it can be pressed
+  claimButtonDisabled: 24, // "Claim Tokens" while it can't be pressed
 } as const;
 
 // Procedural cyber forest. Changing the seed reshuffles the trees and motes.
