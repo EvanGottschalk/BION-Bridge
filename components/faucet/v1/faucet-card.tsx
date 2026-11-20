@@ -11,6 +11,8 @@ import { TokenIcon } from '@/components/bridge/token-icon';
 import { FaucetScene, type FaucetPhase } from './faucet-scene';
 import { DorothyDialogue } from './dorothy-dialogue';
 import { FaucetClaimError, formatWait, requestFaucetClaim } from '@/lib/faucet/claim';
+import { fetchFaucetBalance, formatFaucetBalance } from '@/lib/faucet/balance';
+import { formatUnits, parseUnits } from 'viem';
 import { withOpacity } from '@/lib/faucet/color';
 import {
   DOROTHY_LINES,
@@ -19,6 +21,7 @@ import {
   FAUCET_CONTROLS_COLORS,
   FAUCET_CONTROLS_OPACITY,
   FAUCET_COPY,
+  FAUCET_DEFAULT_TOKEN_ID,
   FAUCET_ICON_SIZE_PX,
   FAUCET_TIMING_MS,
   FAUCET_TOKENS,
@@ -91,6 +94,69 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
+// The wallet label's balance. Read on-chain once per token / wallet; after a
+// claim, the claimed amount is added locally and counted up over
+// FAUCET_TIMING_MS.balanceCountUp (no re-read, so it shows up immediately).
+function useWalletBalance(token: FaucetToken, owner: string | null, reducedMotion: boolean) {
+  const [shown, setShown] = useState<number | null>(null);
+  const raw = useRef<bigint | null>(null);
+  const readId = useRef(0); // bumped to ignore an out-of-date read
+  const frame = useRef<number | null>(null);
+
+  const stopCounting = () => {
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    frame.current = null;
+  };
+
+  useEffect(() => {
+    const id = ++readId.current;
+    stopCounting();
+    raw.current = null;
+    setShown(null);
+    if (!owner) return;
+    fetchFaucetBalance(token, owner).then(
+      (value) => {
+        if (id !== readId.current) return;
+        raw.current = value;
+        setShown(Number(formatUnits(value, token.decimals)));
+      },
+      (error: unknown) => console.warn('[faucet] balance read failed', token.id, error)
+    );
+  }, [token, owner]);
+
+  useEffect(() => stopCounting, []);
+
+  const addClaim = useCallback(
+    (amount: string) => {
+      const before = raw.current;
+      if (before === null) return; // balance unknown, nothing to add to
+      readId.current++;
+      const after = before + parseUnits(amount, token.decimals);
+      raw.current = after;
+      const from = Number(formatUnits(before, token.decimals));
+      const to = Number(formatUnits(after, token.decimals));
+      stopCounting();
+      if (reducedMotion) {
+        setShown(to);
+        return;
+      }
+      // Intermediate values use the final value's decimals so the label doesn't jitter.
+      const step = 10 ** (formatFaucetBalance(to).split('.')[1]?.length ?? 0);
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / FAUCET_TIMING_MS.balanceCountUp);
+        const eased = 1 - (1 - t) ** 3;
+        setShown(t < 1 ? Math.round((from + (to - from) * eased) * step) / step : to);
+        frame.current = t < 1 ? requestAnimationFrame(tick) : null;
+      };
+      frame.current = requestAnimationFrame(tick);
+    },
+    [token, reducedMotion]
+  );
+
+  return { balance: shown === null ? null : formatFaucetBalance(shown), addClaim };
+}
+
 function TokenOption({ token, iconSize }: { token: FaucetToken; iconSize: number }) {
   return (
     <span className="flex items-center gap-2.5 min-w-0">
@@ -112,7 +178,7 @@ export function FaucetCard() {
   const solana = useWallet();
   const solanaModal = useWalletModal();
 
-  const [tokenId, setTokenId] = useState<string>('');
+  const [tokenId, setTokenId] = useState<string>(FAUCET_DEFAULT_TOKEN_ID);
   const [phase, setPhase] = useState<FaucetPhase>('idle');
   const [line, setLine] = useState<string>(DOROTHY_LINES.greeting);
   const [busy, setBusy] = useState(false);
@@ -130,12 +196,9 @@ export function FaucetCard() {
     };
   }, []);
 
-  const token = FAUCET_TOKENS.find((t) => t.id === tokenId) ?? null;
-  const recipient = token
-    ? token.vm === 'svm'
-      ? solana.publicKey?.toBase58() ?? null
-      : evm.address ?? null
-    : null;
+  const token = FAUCET_TOKENS.find((t) => t.id === tokenId) ?? FAUCET_TOKENS[0];
+  const recipient = token.vm === 'svm' ? solana.publicKey?.toBase58() ?? null : evm.address ?? null;
+  const { balance: walletBalance, addClaim } = useWalletBalance(token, recipient, reducedMotion);
 
   const onTokenChange = (id: string) => {
     const next = FAUCET_TOKENS.find((t) => t.id === id);
@@ -147,14 +210,13 @@ export function FaucetCard() {
   };
 
   const connect = useCallback(() => {
-    if (!token) return;
     setLine(DOROTHY_LINES.needsWallet(token.vm));
     if (token.vm === 'svm') solanaModal.setVisible(true);
     else openConnectModal?.();
   }, [token, solanaModal, openConnectModal]);
 
   const claim = useCallback(async () => {
-    if (!token || !recipient || busy) return;
+    if (!recipient || busy) return;
     const wait = (ms: number) => sleep(reducedMotion ? 0 : ms);
     const step = (p: FaucetPhase, l?: string) => {
       if (!mounted.current) return false;
@@ -189,18 +251,17 @@ export function FaucetCard() {
       if (!step('falling', DOROTHY_LINES.dropping)) return;
       await wait(FAUCET_TIMING_MS.falling);
       if (!step('splash', DOROTHY_LINES.success(outcome.result.amount, outcome.result.symbol))) return;
+      addClaim(outcome.result.amount); // the drop landed: count the balance up
       await wait(FAUCET_TIMING_MS.splash);
       step('done');
     } finally {
       if (mounted.current) setBusy(false);
     }
-  }, [token, recipient, busy, reducedMotion]);
+  }, [token, recipient, busy, reducedMotion, addClaim]);
 
-  const button = !token
-    ? { label: FAUCET_COPY.claim, onClick: undefined, disabled: true }
-    : !recipient
-      ? { label: FAUCET_COPY.connectWallet(token.vm), onClick: connect, disabled: false }
-      : { label: busy ? FAUCET_COPY.claiming : FAUCET_COPY.claim, onClick: claim, disabled: busy };
+  const button = !recipient
+    ? { label: FAUCET_COPY.connectWallet(token.vm), onClick: connect, disabled: false }
+    : { label: busy ? FAUCET_COPY.claiming : FAUCET_COPY.claim, onClick: claim, disabled: busy };
 
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-4 lg:gap-6">
@@ -210,8 +271,9 @@ export function FaucetCard() {
       >
         <FaucetScene
           phase={phase}
-          symbol={token?.symbol ?? FAUCET_COPY.walletPlaceholder}
-          amount={token?.amount ?? ''}
+          symbol={token.symbol}
+          amount={token.amount}
+          balance={walletBalance}
         />
       </div>
 
@@ -228,10 +290,10 @@ export function FaucetCard() {
             </label>
             {!hydrated ? (
               <div
-                className={`${TRIGGER_CLASS} flex items-center text-muted-foreground border`}
+                className={`${TRIGGER_CLASS} flex items-center border`}
                 style={CONTROLS_STYLE.tokenSelect}
               >
-                {FAUCET_COPY.tokenPlaceholder}
+                <TokenOption token={token} iconSize={FAUCET_ICON_SIZE_PX.selectTrigger} />
               </div>
             ) : (
               <Select value={tokenId} onValueChange={onTokenChange} disabled={busy}>
@@ -240,8 +302,8 @@ export function FaucetCard() {
                   className={`${TRIGGER_CLASS} cursor-pointer`}
                   style={CONTROLS_STYLE.tokenSelect}
                 >
-                  <SelectValue placeholder={FAUCET_COPY.tokenPlaceholder}>
-                    {token && <TokenOption token={token} iconSize={FAUCET_ICON_SIZE_PX.selectTrigger} />}
+                  <SelectValue>
+                    <TokenOption token={token} iconSize={FAUCET_ICON_SIZE_PX.selectTrigger} />
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent

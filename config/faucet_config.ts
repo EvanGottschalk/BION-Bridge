@@ -77,14 +77,15 @@ export const FAUCET_COPY = {
   heading: 'Faucet',
   subheading: 'Free testnet tokens, poured fresh from the cyber forest.',
   tokenLabel: 'Token',
-  tokenPlaceholder: 'Choose a token',
   claim: 'Claim Tokens',
   claiming: 'Claiming…',
   connectWallet: (vm: 'evm' | 'svm') =>
     vm === 'svm' ? 'Connect Solana wallet' : 'Connect EVM wallet',
   perClaim: (amount: string, symbol: string) => `${amount} ${symbol} per claim`,
   networkBadge: (network: string) => network,
-  walletPlaceholder: 'WALLET', // wallet label before a token is chosen
+  // Label on the wallet, e.g. "0.023 ETH". `balance` is null while it's
+  // loading, if no wallet is connected, or if it couldn't be read.
+  walletBalance: (balance: string | null, symbol: string) => `${balance ?? '—'} ${symbol}`,
   sceneAria:'A cyber faucet pouring liquid digital energy into your wallet',
   skipHint: 'Tap to skip',
   claimedAmount: (amount: string, symbol: string) => `+${amount} ${symbol}`,
@@ -215,6 +216,16 @@ export const FAUCET_TIMING_MS = {
   charging: 900, // drop swells at the spout
   falling: 650, // drop falls into the wallet
   splash: 1500, // wallet ripples and glows, +amount floats up
+  balanceCountUp: 900, // the wallet's balance counts up to its new value (starts with splash)
+} as const;
+
+// Selected when the page loads, so a token is always chosen.
+export const FAUCET_DEFAULT_TOKEN_ID = 'tbion-solana-devnet';
+
+// How balances are written on the wallet: "19,998" / "0.0231".
+export const FAUCET_BALANCE_FORMAT = {
+  locale: 'en-US',
+  maxFractionDigits: 4,
 } as const;
 
 export const FAUCET_TYPEWRITER_MS_PER_CHAR = 22;

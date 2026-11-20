@@ -8,7 +8,8 @@ export type FaucetPhase = 'idle' | 'turning' | 'charging' | 'falling' | 'splash'
 interface FaucetSceneProps {
   phase: FaucetPhase;
   symbol: string;
-  amount: string;
+  amount: string; // claimed per pour, for the "+amount" readout
+  balance: string | null; // formatted wallet balance, null if unknown
 }
 
 // Energy runs down the supply pipe, along the body, around the spout bend and
@@ -19,6 +20,9 @@ const NOZZLE = { x: 290, y: 142 };
 const WALLET_SLOT_Y = 252;
 const DROP_HEIGHT = 43;
 const WHEEL = { x: 165, y: 40, r: 24 };
+// Balance label on the wallet: centered between the wallet's left edge and the
+// clasp. Long labels shrink (down from maxFontSize) to fit maxWidth.
+const WALLET_LABEL = { x: 280, y: 289, maxWidth: 72, maxFontSize: 14, charWidthEm: 0.62 };
 
 const SPLASH_PARTICLES = [
   { dx: -46, dy: -34 },
@@ -31,8 +35,13 @@ const SPLASH_PARTICLES = [
   { dx: 38, dy: -14 },
 ];
 
-export function FaucetScene({ phase, symbol, amount }: FaucetSceneProps) {
+export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps) {
   const c = FAUCET_COLORS;
+  const label = FAUCET_COPY.walletBalance(balance, symbol);
+  const labelSize = Math.min(
+    WALLET_LABEL.maxFontSize,
+    WALLET_LABEL.maxWidth / (label.length * WALLET_LABEL.charWidthEm)
+  );
   const timing = {
     '--faucet-turning': `${FAUCET_TIMING_MS.turning}ms`,
     '--faucet-charging': `${FAUCET_TIMING_MS.charging}ms`,
@@ -221,7 +230,6 @@ export function FaucetScene({ phase, symbol, amount }: FaucetSceneProps) {
       {/* Wallet */}
       <g className="faucet-wallet">
         <rect x={238} y={240} width={104} height={20} rx={6} fill={c.metalMid} stroke={c.walletEdge} strokeWidth={0.75} />
-        <rect x={246} y={236} width={60} height={14} rx={3} fill={c.metalLight} opacity={0.7} />
         <rect x={232} y={252} width={116} height={60} rx={12} fill={c.wallet} stroke={c.walletEdge} strokeWidth={1.25} />
         <g clipPath="url(#faucet-wallet-clip)">
           <rect x={232} y={252} width={116} height={60} fill="url(#faucet-energy)" className="faucet-wallet-fill" />
@@ -242,15 +250,17 @@ export function FaucetScene({ phase, symbol, amount }: FaucetSceneProps) {
         <rect x={322} y={274} width={34} height={22} rx={7} fill={c.metalMid} stroke={c.walletEdge} strokeWidth={1} />
         <circle cx={337} cy={285} r={4} fill={c.energy} className="faucet-node" />
         <text
-          x={278}
-          y={294}
+          x={WALLET_LABEL.x}
+          y={WALLET_LABEL.y}
           textAnchor="middle"
+          dominantBaseline="middle"
           fill={c.walletText}
-          fontSize={14}
+          fontSize={labelSize}
           fontWeight={600}
           letterSpacing={0.5}
+          style={{ fontVariantNumeric: 'tabular-nums' }}
         >
-          {symbol}
+          {label}
         </text>
       </g>
 

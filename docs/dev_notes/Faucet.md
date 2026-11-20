@@ -116,6 +116,13 @@ FaucetCard → lib/faucet/claim.ts (requestFaucetClaim)
   `DOROTHY_LINES.failure`. A send failing for lack of funds reports `dry`.
 - After a claim, a "View transaction" link to the explorer appears under the
   controls.
+- **Wallet label** ("0.023 ETH"): the connected wallet's balance is read
+  on-chain once per token / wallet (`lib/faucet/balance.ts`). After a claim
+  it is *not* re-read; the claimed amount is added locally and counts up over
+  `FAUCET_TIMING_MS.balanceCountUp` when the drop lands. Shows "—" when no
+  wallet is connected. Long labels shrink to fit.
+- `FAUCET_DEFAULT_TOKEN_ID` (tBION) is selected on load, so a token is always
+  chosen.
 - **Not protected against:** one person using many addresses. Fine for a demo;
   add a per-IP limit or a captcha if it gets abused.
 
