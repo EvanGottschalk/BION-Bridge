@@ -62,7 +62,7 @@ keyed off `data-phase`:
 | `charging` | a big blue-green drop swells at the nozzle (also waits for the claim)| `.charging` |
 | `falling`  | drop accelerates down into the wallet slot                          | `.falling` |
 | `splash`   | wallet squash-and-stretch, ripples, particles, `+amount SYMBOL`     | `.splash` |
-| `done`     | valve closes, wallet keeps a soft energy glow                       | —        |
+| `done`     | valve closes, wallet stays full of energy (see "Filled wallet")     | —        |
 
 Timings are passed into CSS as `--faucet-*` custom properties from config, so
 changing `FAUCET_TIMING_MS` keeps JS sequencing and CSS durations in sync.
@@ -121,6 +121,14 @@ FaucetCard → lib/faucet/claim.ts (requestFaucetClaim)
   it is *not* re-read; the claimed amount is added locally and counts up over
   `FAUCET_TIMING_MS.balanceCountUp` when the drop lands. Shows "—" when no
   wallet is connected. Long labels shrink to fit.
+- **Filled wallet:** when a claim lands, the wallet fills up to just above its
+  dotted line (halfway to the bottom of "MY WALLET"; `WALLET_FILL_TOP` in
+  `faucet-scene.tsx`, clipped to the wallet body's exact shape) and stays
+  filled (`data-filled` on the scene SVG) while the selected token is on
+  cooldown for the connected wallet. The card asks
+  `GET /api/faucet/claim?tokenId=…&recipient=…` (→ `{ cooldownSeconds }`, the
+  Redis TTL) whenever the token / wallet changes, so it survives reloads and
+  turns off by itself when the cooldown ends. Strength: `FAUCET_WALLET_FILL`.
 - `FAUCET_DEFAULT_TOKEN_ID` (tBION) is selected on load, so a token is always
   chosen.
 - **Not protected against:** one person using many addresses. Fine for a demo;

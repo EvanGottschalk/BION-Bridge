@@ -1,7 +1,13 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { FAUCET_COLORS, FAUCET_COPY, FAUCET_TIMING_MS, FAUCET_WALLET_TITLE } from '@/config/faucet_config';
+import {
+  FAUCET_COLORS,
+  FAUCET_COPY,
+  FAUCET_TIMING_MS,
+  FAUCET_WALLET_FILL,
+  FAUCET_WALLET_TITLE,
+} from '@/config/faucet_config';
 
 export type FaucetPhase = 'idle' | 'turning' | 'charging' | 'falling' | 'splash' | 'done';
 
@@ -10,6 +16,7 @@ interface FaucetSceneProps {
   symbol: string;
   amount: string; // claimed per pour, for the "+amount" readout
   balance: string | null; // formatted wallet balance, null if unknown
+  filled: boolean; // wallet shown full of energy (this token is on cooldown)
 }
 
 // Energy runs down the supply pipe, along the body, around the spout bend and
@@ -26,6 +33,12 @@ const WALLET_LABEL = { x: 280, y: 289, maxWidth: 72, maxFontSize: 14, charWidthE
 // "MY WALLET" title: centered in the strip between the wallet's top edge (252)
 // and its dotted line (268).
 const WALLET_TITLE_POS = { x: 290, y: 260.5 };
+const WALLET_BODY = { x: 232, y: 252, width: 116, height: 60, rx: 12 };
+const WALLET_DOTTED_LINE_Y = 268;
+// A full wallet's energy stops halfway between the dotted line and the bottom
+// of the "MY WALLET" title, so it follows FAUCET_WALLET_TITLE.fontSize.
+const WALLET_FILL_TOP =
+  (WALLET_DOTTED_LINE_Y + WALLET_TITLE_POS.y + FAUCET_WALLET_TITLE.fontSize / 2) / 2;
 
 const SPLASH_PARTICLES = [
   { dx: -46, dy: -34 },
@@ -38,7 +51,7 @@ const SPLASH_PARTICLES = [
   { dx: 38, dy: -14 },
 ];
 
-export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps) {
+export function FaucetScene({ phase, symbol, amount, balance, filled }: FaucetSceneProps) {
   const c = FAUCET_COLORS;
   const label = FAUCET_COPY.walletBalance(balance, symbol);
   const labelSize = Math.min(
@@ -51,6 +64,7 @@ export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps
     '--faucet-falling': `${FAUCET_TIMING_MS.falling}ms`,
     '--faucet-splash': `${FAUCET_TIMING_MS.splash}ms`,
     '--faucet-fall-distance': `${WALLET_SLOT_Y - NOZZLE.y - DROP_HEIGHT + 8}px`,
+    '--faucet-wallet-fill-opacity': FAUCET_WALLET_FILL.opacity,
   } as CSSProperties;
 
   return (
@@ -58,6 +72,7 @@ export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps
       viewBox="36 0 360 320"
       className="faucet-scene block w-full h-auto max-h-[52vh] lg:max-h-[68vh]"
       data-phase={phase}
+      data-filled={filled}
       style={timing}
       role="img"
       aria-label={FAUCET_COPY.sceneAria}
@@ -101,8 +116,9 @@ export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        {/* Exactly the wallet body's shape, so the fill never pokes past its corners. */}
         <clipPath id="faucet-wallet-clip">
-          <rect x={232} y={246} width={116} height={66} rx={12} />
+          <rect x={WALLET_BODY.x} y={WALLET_BODY.y} width={WALLET_BODY.width} height={WALLET_BODY.height} rx={WALLET_BODY.rx} />
         </clipPath>
       </defs>
 
@@ -235,7 +251,14 @@ export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps
         <rect x={238} y={240} width={104} height={20} rx={6} fill={c.metalMid} stroke={c.walletEdge} strokeWidth={0.75} />
         <rect x={232} y={252} width={116} height={60} rx={12} fill={c.wallet} stroke={c.walletEdge} strokeWidth={1.25} />
         <g clipPath="url(#faucet-wallet-clip)">
-          <rect x={232} y={252} width={116} height={60} fill="url(#faucet-energy)" className="faucet-wallet-fill" />
+          <rect
+            x={WALLET_BODY.x}
+            y={WALLET_FILL_TOP}
+            width={WALLET_BODY.width}
+            height={WALLET_BODY.y + WALLET_BODY.height - WALLET_FILL_TOP}
+            fill="url(#faucet-energy)"
+            className="faucet-wallet-fill"
+          />
         </g>
         <rect
           x={232}
@@ -262,7 +285,7 @@ export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps
         >
           {FAUCET_WALLET_TITLE.text}
         </text>
-        <path d="M 244 268 L 336 268" stroke={c.circuit} strokeWidth={0.75} strokeDasharray="3 4" />
+        <path d={`M 244 ${WALLET_DOTTED_LINE_Y} L 336 ${WALLET_DOTTED_LINE_Y}`} stroke={c.circuit} strokeWidth={0.75} strokeDasharray="3 4" />
         <rect x={322} y={274} width={34} height={22} rx={7} fill={c.metalMid} stroke={c.walletEdge} strokeWidth={1} />
         <circle cx={337} cy={285} r={4} fill={c.energy} className="faucet-node" />
         <text

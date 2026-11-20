@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TokenIcon } from '@/components/bridge/token-icon';
 import { FaucetScene, type FaucetPhase } from './faucet-scene';
 import { DorothyDialogue } from './dorothy-dialogue';
-import { FaucetClaimError, formatWait, requestFaucetClaim } from '@/lib/faucet/claim';
+import { FaucetClaimError, fetchFaucetCooldown, formatWait, requestFaucetClaim } from '@/lib/faucet/claim';
 import { fetchFaucetBalance, formatFaucetBalance } from '@/lib/faucet/balance';
 import { formatUnits, parseUnits } from 'viem';
 import { withOpacity } from '@/lib/faucet/color';
@@ -20,6 +20,7 @@ import {
   FAUCET_CONTROLS_BLUR_PX,
   FAUCET_CONTROLS_COLORS,
   FAUCET_CONTROLS_OPACITY,
+  FAUCET_COOLDOWN_SECONDS,
   FAUCET_COPY,
   FAUCET_DEFAULT_TOKEN_ID,
   FAUCET_ICON_SIZE_PX,
@@ -157,6 +158,39 @@ function useWalletBalance(token: FaucetToken, owner: string | null, reducedMotio
   return { balance: shown === null ? null : formatFaucetBalance(shown), addClaim };
 }
 
+// Whether the connected wallet is on cooldown for `token` (so the wallet art
+// stays filled). Asked of the server once per token / wallet; set locally
+// after a claim; turns itself off when the cooldown runs out.
+function useClaimCooldown(token: FaucetToken, owner: string | null) {
+  const [until, setUntil] = useState<number | null>(null); // ms timestamp
+  const readId = useRef(0);
+
+  useEffect(() => {
+    const id = ++readId.current;
+    setUntil(null);
+    if (!owner) return;
+    fetchFaucetCooldown(token, owner).then(
+      (seconds) => {
+        if (id === readId.current) setUntil(seconds ? Date.now() + seconds * 1000 : null);
+      },
+      (error: unknown) => console.warn('[faucet] cooldown status read failed', token.id, error)
+    );
+  }, [token, owner]);
+
+  useEffect(() => {
+    if (until === null) return;
+    const timer = setTimeout(() => setUntil(null), Math.max(0, until - Date.now()));
+    return () => clearTimeout(timer);
+  }, [until]);
+
+  const startCooldown = useCallback((seconds: number) => {
+    readId.current++; // a status read still in flight is now out of date
+    setUntil(Date.now() + seconds * 1000);
+  }, []);
+
+  return { onCooldown: until !== null, startCooldown };
+}
+
 function TokenOption({ token, iconSize }: { token: FaucetToken; iconSize: number }) {
   return (
     <span className="flex items-center gap-2.5 min-w-0">
@@ -199,6 +233,7 @@ export function FaucetCard() {
   const token = FAUCET_TOKENS.find((t) => t.id === tokenId) ?? FAUCET_TOKENS[0];
   const recipient = token.vm === 'svm' ? solana.publicKey?.toBase58() ?? null : evm.address ?? null;
   const { balance: walletBalance, addClaim } = useWalletBalance(token, recipient, reducedMotion);
+  const { onCooldown, startCooldown } = useClaimCooldown(token, recipient);
 
   const onTokenChange = (id: string) => {
     const next = FAUCET_TOKENS.find((t) => t.id === id);
@@ -240,6 +275,7 @@ export function FaucetCard() {
       if (!outcome.ok) {
         const { error } = outcome;
         if (error instanceof FaucetClaimError && error.code === 'cooldown') {
+          startCooldown(error.retryAfterSeconds ?? FAUCET_COOLDOWN_SECONDS); // already claimed elsewhere
           step('idle', DOROTHY_LINES.cooldown(token.symbol, formatWait(error.retryAfterSeconds ?? 0)));
         } else {
           const reason = error instanceof Error ? error.message : SWAP_PROGRESS_COPY.unknownError;
@@ -252,12 +288,13 @@ export function FaucetCard() {
       await wait(FAUCET_TIMING_MS.falling);
       if (!step('splash', DOROTHY_LINES.success(outcome.result.amount, outcome.result.symbol))) return;
       addClaim(outcome.result.amount); // the drop landed: count the balance up
+      startCooldown(FAUCET_COOLDOWN_SECONDS); // and keep the wallet filled until it can claim again
       await wait(FAUCET_TIMING_MS.splash);
       step('done');
     } finally {
       if (mounted.current) setBusy(false);
     }
-  }, [token, recipient, busy, reducedMotion, addClaim]);
+  }, [token, recipient, busy, reducedMotion, addClaim, startCooldown]);
 
   const button = !recipient
     ? { label: FAUCET_COPY.connectWallet(token.vm), onClick: connect, disabled: false }
@@ -274,6 +311,7 @@ export function FaucetCard() {
           symbol={token.symbol}
           amount={token.amount}
           balance={walletBalance}
+          filled={onCooldown}
         />
       </div>
 

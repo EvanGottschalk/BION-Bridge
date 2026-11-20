@@ -14,6 +14,8 @@ interface CooldownStore {
   // null = reserved; otherwise the seconds left on the existing cooldown.
   reserve(key: string, seconds: number): Promise<number | null>;
   release(key: string): Promise<void>;
+  // Seconds left on the cooldown, or null if there is none.
+  remaining(key: string): Promise<number | null>;
 }
 
 function upstashStore(url: string, token: string): CooldownStore {
@@ -39,6 +41,10 @@ function upstashStore(url: string, token: string): CooldownStore {
     async release(key) {
       await command(['DEL', key]);
     },
+    async remaining(key) {
+      const ttl = Number(await command(['TTL', key]));
+      return ttl > 0 ? ttl : null;
+    },
   };
 }
 
@@ -56,6 +62,10 @@ function memoryStore(): CooldownStore {
     },
     async release(key) {
       expiries.delete(key);
+    },
+    async remaining(key) {
+      const left = (expiries.get(key) ?? 0) - Date.now();
+      return left > 0 ? Math.ceil(left / 1000) : null;
     },
   };
 }
@@ -79,3 +89,4 @@ function getStore(): CooldownStore {
 
 export const reserveClaim = (key: string, seconds: number) => getStore().reserve(key, seconds);
 export const releaseClaim = (key: string) => getStore().release(key);
+export const claimCooldownLeft = (key: string) => getStore().remaining(key);

@@ -219,6 +219,14 @@ export const FAUCET_TIMING_MS = {
   balanceCountUp: 900, // the wallet's balance counts up to its new value (starts with splash)
 } as const;
 
+// The wallet fills with energy when a claim lands and stays filled until that
+// token's cooldown (FAUCET_COOLDOWN_SECONDS) runs out for the connected wallet.
+// opacity: how strong the filled energy looks (1 = solid; lower keeps the
+// wallet's text readable).
+export const FAUCET_WALLET_FILL = {
+  opacity: 0.5,
+} as const;
+
 // Title printed on the wallet, above its dotted line. Sizes are in the
 // scene's SVG units (the wallet is 116 wide; the strip above the dotted line
 // is about 16 tall, so keep fontSize under ~10).

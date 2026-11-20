@@ -31,3 +31,7 @@ export interface FaucetClaimFailure {
 }
 
 export type FaucetClaimResponse = FaucetClaimSuccess | FaucetClaimFailure;
+
+// GET /api/faucet/claim?tokenId=…&recipient=… → time left before this address
+// can claim this token again (null = can claim now).
+export type FaucetStatusResponse = { ok: true; cooldownSeconds: number | null } | FaucetClaimFailure;

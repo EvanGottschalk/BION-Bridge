@@ -4,6 +4,7 @@ import type {
   FaucetClaimResponse,
   FaucetClaimSuccess,
   FaucetErrorCode,
+  FaucetStatusResponse,
 } from './types';
 
 export type FaucetClaimResult = Omit<FaucetClaimSuccess, 'ok'>;
@@ -38,6 +39,16 @@ export async function requestFaucetClaim(token: FaucetToken, recipient: string):
   if (!data.ok) throw new FaucetClaimError(data.message, data.code, data.retryAfterSeconds);
   const { ok: _ok, ...result } = data;
   return result;
+}
+
+// Seconds until `recipient` can claim `token` again; null if they can claim
+// now. Throws if the status couldn't be read.
+export async function fetchFaucetCooldown(token: FaucetToken, recipient: string): Promise<number | null> {
+  const query = new URLSearchParams({ tokenId: token.id, recipient });
+  const res = await fetch(`${FAUCET_API_ROUTE}?${query}`, { cache: 'no-store' });
+  const data = (await res.json()) as FaucetStatusResponse;
+  if (!data.ok) throw new FaucetClaimError(data.message, data.code);
+  return data.cooldownSeconds;
 }
 
 // Seconds → "5h 12m" / "3m", rounded up to the next minute.
