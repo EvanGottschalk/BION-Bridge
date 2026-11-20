@@ -1,7 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { FAUCET_COLORS, FAUCET_COPY, FAUCET_TIMING_MS } from '@/config/faucet_config';
+import { FAUCET_COLORS, FAUCET_COPY, FAUCET_TIMING_MS, FAUCET_WALLET_TITLE } from '@/config/faucet_config';
 
 export type FaucetPhase = 'idle' | 'turning' | 'charging' | 'falling' | 'splash' | 'done';
 
@@ -23,6 +23,9 @@ const WHEEL = { x: 165, y: 40, r: 24 };
 // Balance label on the wallet: centered between the wallet's left edge and the
 // clasp. Long labels shrink (down from maxFontSize) to fit maxWidth.
 const WALLET_LABEL = { x: 280, y: 289, maxWidth: 72, maxFontSize: 14, charWidthEm: 0.62 };
+// "MY WALLET" title: centered in the strip between the wallet's top edge (252)
+// and its dotted line (268).
+const WALLET_TITLE_POS = { x: 290, y: 260.5 };
 
 const SPLASH_PARTICLES = [
   { dx: -46, dy: -34 },
@@ -246,6 +249,19 @@ export function FaucetScene({ phase, symbol, amount, balance }: FaucetSceneProps
           className="faucet-wallet-flash"
           filter="url(#faucet-glow)"
         />
+        <text
+          x={WALLET_TITLE_POS.x}
+          y={WALLET_TITLE_POS.y}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={FAUCET_WALLET_TITLE.color}
+          fontSize={FAUCET_WALLET_TITLE.fontSize}
+          fontWeight={FAUCET_WALLET_TITLE.fontWeight}
+          letterSpacing={FAUCET_WALLET_TITLE.letterSpacing}
+          fontFamily={FAUCET_WALLET_TITLE.fontFamily}
+        >
+          {FAUCET_WALLET_TITLE.text}
+        </text>
         <path d="M 244 268 L 336 268" stroke={c.circuit} strokeWidth={0.75} strokeDasharray="3 4" />
         <rect x={322} y={274} width={34} height={22} rx={7} fill={c.metalMid} stroke={c.walletEdge} strokeWidth={1} />
         <circle cx={337} cy={285} r={4} fill={c.energy} className="faucet-node" />

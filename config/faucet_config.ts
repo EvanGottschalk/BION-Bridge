@@ -219,6 +219,18 @@ export const FAUCET_TIMING_MS = {
   balanceCountUp: 900, // the wallet's balance counts up to its new value (starts with splash)
 } as const;
 
+// Title printed on the wallet, above its dotted line. Sizes are in the
+// scene's SVG units (the wallet is 116 wide; the strip above the dotted line
+// is about 16 tall, so keep fontSize under ~10).
+export const FAUCET_WALLET_TITLE = {
+  text: 'MY WALLET',
+  fontSize: 6,
+  fontWeight: 400,
+  letterSpacing: 1.5,
+  color: 'rgba(207,250,240,0.4)',
+  fontFamily: 'inherit', // any CSS font-family, e.g. 'monospace'
+} as const;
+
 // Selected when the page loads, so a token is always chosen.
 export const FAUCET_DEFAULT_TOKEN_ID = 'tbion-solana-devnet';
 
