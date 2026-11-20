@@ -8,7 +8,7 @@ export const SOLANA_PROGRAM_IDS = {
   ed25519: 'Ed25519SigVerify111111111111111111111111111',
   system: '11111111111111111111111111111111',
   token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-  token2022: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PeNWqhjXvmPTsBo',
+  token2022: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
   associatedToken: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
   wormholeCoreDevnet: '3u8hJUVTA4jH1wYAyUur7FFZVQ8H635K3tSHHF4ssjQ5',
   wormholeCoreMainnet: 'worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth',
