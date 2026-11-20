@@ -47,7 +47,7 @@ portrait frame pulses while she is "speaking". Screen readers get the full line
 once via an `aria-live` sr-only span, not character by character.
 
 She speaks at every step: greeting → token chosen / needs wallet → turning →
-dropping → success (or failure).
+dropping → success (or failure / cooldown).
 
 ## 4. Claim flow and animation
 
@@ -78,12 +78,46 @@ The selected token's VM (`evm` / `svm`) decides which wallet is needed. If it
 isn't connected, the button reads "Connect EVM/Solana wallet" and opens
 RainbowKit's or the Solana adapter's modal.
 
-## 6. The claim is simulated
+## 6. Real claims (server)
 
-`lib/faucet/claim.ts` → `requestFaucetClaim(token, recipient)` currently just
-waits `FAUCET_SIMULATED_CLAIM_MS` and resolves. **No tokens are actually
-sent.** Wire a real faucet (API route or on-chain call) there. Thrown errors
-are surfaced through Dorothy's `failure` line.
+Tokens: tBION and SOL on Solana Devnet, ETH on Base Sepolia (`FAUCET_TOKENS`).
+Each address can claim **each token once per `FAUCET_COOLDOWN_SECONDS`** (24h).
+
+```
+FaucetCard → lib/faucet/claim.ts (requestFaucetClaim)
+  → POST /api/faucet/claim  { tokenId, recipient }   app/api/faucet/claim/route.ts
+       1. validate token id (amount comes from config, never the request) + address
+       2. reserve the cooldown: Redis SET faucet:v1:{tokenId}:{address} NX EX 86400
+          → already set? 429 { code: 'cooldown', retryAfterSeconds }
+       3. send from the faucet wallet       lib/faucet/server/evm.ts | solana.ts
+       4. send failed (nothing left the wallet)? DEL the key so they can retry
+  ← { ok, amount, symbol, txHash, explorerUrl }
+```
+
+- **Server-only code** lives in `lib/faucet/server/` (each file imports
+  `server-only`, so it can never be bundled into the browser).
+- **Secrets** (`.env.local` locally, Vercel → Settings → Environment Variables
+  in production): `FAUCET_EVM_PRIVATE_KEY`, `FAUCET_SOLANA_SECRET_KEY`, and the
+  Upstash Redis pair (`KV_REST_API_URL`/`_TOKEN` or
+  `UPSTASH_REDIS_REST_URL`/`_TOKEN`). Names are in `FAUCET_ENV`.
+- **No Redis in local dev** → an in-memory store is used (resets on restart).
+  In production the route returns `not_configured` instead.
+- **RPC:** Base Sepolia uses `BASE_SEPOLIA.rpcUrls` (Alchemy, then public);
+  Solana uses Helius devnet if `NEXT_PUBLIC_HELIUS_API_KEY` is set, else the
+  public devnet RPC (`FAUCET_SOLANA_RPC_URLS`).
+- **SPL tokens:** the mint's owner decides the program (tBION is Token-2022).
+  The faucet pays the ~0.002 SOL rent to create a recipient's token account
+  the first time.
+- **Confirmation:** the route waits up to `FAUCET_CONFIRM_TIMEOUT_MS` for the
+  tx to confirm, then replies anyway (the cooldown stays). Route `maxDuration`
+  is 60 s.
+- **Errors** (`FAUCET_ERRORS`) are read out by Dorothy: `cooldown` uses
+  `DOROTHY_LINES.cooldown` ("refills for you in 5h 12m"); others use
+  `DOROTHY_LINES.failure`. A send failing for lack of funds reports `dry`.
+- After a claim, a "View transaction" link to the explorer appears under the
+  controls.
+- **Not protected against:** one person using many addresses. Fine for a demo;
+  add a per-IP limit or a captcha if it gets abused.
 
 ## 7. Known quirk
 

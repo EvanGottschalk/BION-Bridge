@@ -1,16 +1,47 @@
-import { FAUCET_SIMULATED_CLAIM_MS, type FaucetToken } from '@/config/faucet_config';
+import { FAUCET_API_ROUTE, FAUCET_COPY, FAUCET_ERRORS, type FaucetToken } from '@/config/faucet_config';
+import type {
+  FaucetClaimRequest,
+  FaucetClaimResponse,
+  FaucetClaimSuccess,
+  FaucetErrorCode,
+} from './types';
 
-export interface FaucetClaimResult {
-  amount: string;
-  symbol: string;
+export type FaucetClaimResult = Omit<FaucetClaimSuccess, 'ok'>;
+
+export class FaucetClaimError extends Error {
+  constructor(
+    message: string,
+    public readonly code: FaucetErrorCode,
+    public readonly retryAfterSeconds?: number
+  ) {
+    super(message);
+    this.name = 'FaucetClaimError';
+  }
 }
 
-// Simulated claim. Replace the body with a real faucet request (API route or
-// on-chain call) when a backend exists; the page only depends on this signature.
-export async function requestFaucetClaim(
-  token: FaucetToken,
-  _recipient: string
-): Promise<FaucetClaimResult> {
-  await new Promise((resolve) => setTimeout(resolve, FAUCET_SIMULATED_CLAIM_MS));
-  return { amount: token.amount, symbol: token.symbol };
+// Asks the claim route (app/api/faucet/claim/route.ts) to send `token` to
+// `recipient`. Throws FaucetClaimError with a Dorothy-ready message on failure.
+export async function requestFaucetClaim(token: FaucetToken, recipient: string): Promise<FaucetClaimResult> {
+  const request: FaucetClaimRequest = { tokenId: token.id, recipient };
+  let data: FaucetClaimResponse | null = null;
+  try {
+    const res = await fetch(FAUCET_API_ROUTE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    data = (await res.json().catch(() => null)) as FaucetClaimResponse | null;
+  } catch {
+    // network failure, handled below
+  }
+  if (!data) throw new FaucetClaimError(FAUCET_ERRORS.network, 'network');
+  if (!data.ok) throw new FaucetClaimError(data.message, data.code, data.retryAfterSeconds);
+  const { ok: _ok, ...result } = data;
+  return result;
+}
+
+// Seconds → "5h 12m" / "3m", rounded up to the next minute.
+export function formatWait(seconds: number): string {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  return FAUCET_COPY.duration(Math.floor(minutes / 60), minutes % 60);
 }

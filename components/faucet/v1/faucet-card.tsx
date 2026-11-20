@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TokenIcon } from '@/components/bridge/token-icon';
 import { FaucetScene, type FaucetPhase } from './faucet-scene';
 import { DorothyDialogue } from './dorothy-dialogue';
-import { requestFaucetClaim } from '@/lib/faucet/claim';
+import { FaucetClaimError, formatWait, requestFaucetClaim } from '@/lib/faucet/claim';
 import { withOpacity } from '@/lib/faucet/color';
 import {
   DOROTHY_LINES,
@@ -116,6 +116,7 @@ export function FaucetCard() {
   const [phase, setPhase] = useState<FaucetPhase>('idle');
   const [line, setLine] = useState<string>(DOROTHY_LINES.greeting);
   const [busy, setBusy] = useState(false);
+  const [txUrl, setTxUrl] = useState<string | null>(null); // explorer link for the last successful claim
   const mounted = useRef(true);
   // Radix Select's generated ids drift between server and client under the
   // wallet providers, so it only renders after hydration.
@@ -141,6 +142,7 @@ export function FaucetCard() {
     if (!next) return;
     setTokenId(id);
     setPhase('idle');
+    setTxUrl(null);
     setLine(DOROTHY_LINES.tokenChosen(next.symbol, next.network));
   };
 
@@ -162,6 +164,7 @@ export function FaucetCard() {
     };
 
     setBusy(true);
+    setTxUrl(null);
     const claimPromise = requestFaucetClaim(token, recipient).then(
       (result) => ({ ok: true as const, result }),
       (error: unknown) => ({ ok: false as const, error })
@@ -173,11 +176,16 @@ export function FaucetCard() {
       if (!step('charging')) return;
       const [outcome] = await Promise.all([claimPromise, wait(FAUCET_TIMING_MS.charging)]);
       if (!outcome.ok) {
-        const reason =
-          outcome.error instanceof Error ? outcome.error.message : SWAP_PROGRESS_COPY.unknownError;
-        step('idle', DOROTHY_LINES.failure(reason));
+        const { error } = outcome;
+        if (error instanceof FaucetClaimError && error.code === 'cooldown') {
+          step('idle', DOROTHY_LINES.cooldown(token.symbol, formatWait(error.retryAfterSeconds ?? 0)));
+        } else {
+          const reason = error instanceof Error ? error.message : SWAP_PROGRESS_COPY.unknownError;
+          step('idle', DOROTHY_LINES.failure(reason));
+        }
         return;
       }
+      setTxUrl(outcome.result.explorerUrl);
       if (!step('falling', DOROTHY_LINES.dropping)) return;
       await wait(FAUCET_TIMING_MS.falling);
       if (!step('splash', DOROTHY_LINES.success(outcome.result.amount, outcome.result.symbol))) return;
@@ -275,6 +283,18 @@ export function FaucetCard() {
             </span>
           </button>
         </div>
+
+        {txUrl && (
+          <a
+            href={txUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="self-center text-sm underline underline-offset-4 hover:opacity-80"
+            style={{ color: FAUCET_COLORS.energy }}
+          >
+            {FAUCET_COPY.viewTransaction}
+          </a>
+        )}
       </div>
     </div>
   );

@@ -5,8 +5,68 @@ import type { StaticImageData } from 'next/image';
 import dorothyImage from '../src/image/Dorothy.png';
 import * as baseSepoliaTokens from './token_info/base_testnet_sepolia_tokens';
 import * as solanaDevnetTokens from './token_info/solana_devnet_tokens';
+import { BASE_SEPOLIA, HELIUS_API_KEY_PLACEHOLDER, SOLANA_DEVNET } from './chain_info';
 
 export const FAUCET_V1_ROUTE = '/faucet/v1';
+
+// ── Real claims ─────────────────────────────────────────────────────────────
+// The page POSTs { tokenId, recipient } here; app/api/faucet/claim/route.ts
+// sends the tokens from the faucet wallets. See docs/dev_notes/Faucet.md.
+export const FAUCET_API_ROUTE = '/api/faucet/claim';
+
+// One claim per token, per address, per this many seconds.
+export const FAUCET_COOLDOWN_SECONDS = 24 * 60 * 60;
+
+// Redis keys look like `${prefix}:${tokenId}:${address}`. Changing the prefix
+// resets everyone's cooldown.
+export const FAUCET_REDIS_KEY_PREFIX = 'faucet:v1';
+
+// Names of the server-only environment variables (never NEXT_PUBLIC_).
+// Redis: the Vercel Upstash integration sets KV_REST_API_*; a direct Upstash
+// setup uses UPSTASH_REDIS_REST_*. Either pair works.
+export const FAUCET_ENV = {
+  evmPrivateKey: 'FAUCET_EVM_PRIVATE_KEY', // 0x-prefixed hex
+  solanaSecretKey: 'FAUCET_SOLANA_SECRET_KEY', // base58 (Phantom export) or a JSON byte array
+  redisUrl: ['KV_REST_API_URL', 'UPSTASH_REDIS_REST_URL'],
+  redisToken: ['KV_REST_API_TOKEN', 'UPSTASH_REDIS_REST_TOKEN'],
+} as const;
+
+// Chains the faucet wallets send on. RPC URLs go through resolveRpcUrls, so
+// entries needing a missing API key are skipped.
+export const FAUCET_EVM_CHAIN = BASE_SEPOLIA;
+export const FAUCET_SOLANA_CHAIN = SOLANA_DEVNET;
+export const FAUCET_SOLANA_RPC_URLS = [
+  `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY_PLACEHOLDER}`,
+  ...SOLANA_DEVNET.rpcUrls,
+];
+
+export const faucetExplorerTxUrl = (
+  chain: { explorerUrl: string; explorerQuery?: string },
+  txHash: string
+) => `${chain.explorerUrl}/tx/${txHash}${chain.explorerQuery ?? ''}`;
+
+// How long the server waits for a sent transaction to confirm before
+// replying anyway (the tx usually still lands). Keep well under the route's
+// `maxDuration` (60 s in app/api/faucet/claim/route.ts; Next.js requires that
+// one to be written as a literal in the route file).
+export const FAUCET_CONFIRM_TIMEOUT_MS = 30_000;
+
+// A failed send whose error matches this is reported as "the faucet is dry"
+// (EVM: insufficient funds; Solana: no SOL / no token balance).
+export const FAUCET_DRY_ERROR_PATTERN =
+  /insufficient (funds|lamports)|no record of a prior credit|custom program error: 0x1\b/i;
+
+// Messages the claim route returns; Dorothy reads them out via DOROTHY_LINES.failure.
+export const FAUCET_ERRORS = {
+  badRequest: 'That request didn’t look right.',
+  cooldown: 'Already claimed recently.',
+  invalidToken: 'I don’t pour that token here.',
+  invalidAddress: (network: string) => `That isn’t a valid ${network} address.`,
+  notConfigured: 'The faucet isn’t hooked up yet.',
+  dry: 'The faucet is running dry. Please tell the team!',
+  sendFailed: 'The transaction didn’t go through.',
+  network: 'I couldn’t reach the faucet.',
+} as const;
 
 export const FAUCET_PAGE_META = {
   title: 'Faucet',
@@ -28,6 +88,9 @@ export const FAUCET_COPY = {
   sceneAria:'A cyber faucet pouring liquid digital energy into your wallet',
   skipHint: 'Tap to skip',
   claimedAmount: (amount: string, symbol: string) => `+${amount} ${symbol}`,
+  viewTransaction: 'View transaction ↗',
+  // Time left on a cooldown, e.g. "5h 12m" or "3m".
+  duration: (hours: number, minutes: number) => (hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`),
 } as const;
 
 // Dorothy appears as an NPC portrait beside her dialogue box.
@@ -55,6 +118,8 @@ export const DOROTHY_LINES = {
   success: (amount: string, symbol: string) =>
     `Splash! ${amount} ${symbol} landed safely in your wallet. Come back any time.`,
   failure: (reason: string) => `Oh no, the pipes sputtered: ${reason} Want to try again?`,
+  cooldown: (symbol: string, wait: string) =>
+    `You already got your ${symbol} today! The faucet refills for you in ${wait}.`,
 } as const;
 
 export type FaucetVm = 'evm' | 'svm';
@@ -66,9 +131,13 @@ export interface FaucetToken {
   iconSymbol: string; // file name under src/image/tokens
   network: string;
   vm: FaucetVm;
-  address: string;
+  address: string; // token contract / mint, or FAUCET_NATIVE for ETH / SOL
+  decimals: number;
   amount: string; // human-readable amount poured per claim
 }
+
+// `address` value for the chain's own coin (ETH on Base Sepolia, SOL on Solana).
+export const FAUCET_NATIVE = 'native';
 
 export const FAUCET_TOKENS: readonly FaucetToken[] = [
   // {
@@ -79,6 +148,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
   //   network: 'Base Sepolia',
   //   vm: 'evm',
   //   address: baseSepoliaTokens.TBION.address,
+  //   decimals: baseSepoliaTokens.TBION.decimals,
   //   amount: '100',
   // },
   {
@@ -89,6 +159,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
     network: 'Solana Devnet',
     vm: 'svm',
     address: solanaDevnetTokens.TBION.address,
+    decimals: solanaDevnetTokens.TBION.decimals,
     amount: '9999',
   },
   // {
@@ -99,6 +170,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
   //   network: 'Base Sepolia',
   //   vm: 'evm',
   //   address: baseSepoliaTokens.BRDGTST.address,
+  //   decimals: baseSepoliaTokens.BRDGTST.decimals,
   //   amount: '50',
   // },
   // {
@@ -109,6 +181,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
   //   network: 'Solana Devnet',
   //   vm: 'svm',
   //   address: solanaDevnetTokens.BRDGTST.address,
+  //   decimals: solanaDevnetTokens.BRDGTST.decimals,
   //   amount: '50',
   // },
   {
@@ -118,24 +191,22 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
     iconSymbol: 'SOL Test',
     network: 'Solana Devnet',
     vm: 'svm',
-    address: 'native',
-    amount: '1',
+    address: FAUCET_NATIVE,
+    decimals: 9,
+    amount: '.1',
   },
   {
-    id: 'eth-sepolia',
+    id: 'eth-base-sepolia',
     symbol: 'ETH',
-    name: 'Sepolia Ether',
+    name: 'Base Sepolia Ether',
     iconSymbol: 'ETH Test',
-    network: 'Ethereum Sepolia',
+    network: 'Base Sepolia',
     vm: 'evm',
-    address: 'native',
-    amount: '0.05',
+    address: FAUCET_NATIVE,
+    decimals: 18,
+    amount: '0.001',
   },
 ] as const;
-
-// The claim is simulated until a faucet backend exists. lib/faucet/claim.ts is
-// the single place to wire a real request; this is how long the fake one takes.
-export const FAUCET_SIMULATED_CLAIM_MS = 600;
 
 // Animation phases, in milliseconds. Order: turning → charging → falling →
 // splash. The reduced-motion variants skip straight to the result.
