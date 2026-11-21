@@ -6,6 +6,7 @@ import {
   FAUCET_COPY,
   FAUCET_TIMING_MS,
   FAUCET_WALLET_FILL,
+  FAUCET_WALLET_SURFACE,
   FAUCET_WALLET_TITLE,
 } from '@/config/faucet_config';
 
@@ -39,6 +40,29 @@ const WALLET_DOTTED_LINE_Y = 268;
 // of the "MY WALLET" title, so it follows FAUCET_WALLET_TITLE.fontSize.
 const WALLET_FILL_TOP =
   (WALLET_DOTTED_LINE_Y + WALLET_TITLE_POS.y + FAUCET_WALLET_TITLE.fontSize / 2) / 2;
+// Ripple rings stay left of the clasp.
+const RIPPLE_SPAN = { from: 246, to: 318 };
+
+// The wallet's liquid: wavy top (amplitude > 0) or flat, down to the wallet's
+// bottom. It runs two wavelengths past each side so it can drift one
+// wavelength either way and still cover the wallet; `phase` offsets the crests.
+function liquidPath(amplitude: number, wavelength: number, phase = 0) {
+  const top = WALLET_FILL_TOP;
+  const bottom = WALLET_BODY.y + WALLET_BODY.height;
+  const x0 = WALLET_BODY.x - 2 * wavelength - phase;
+  const x1 = WALLET_BODY.x + WALLET_BODY.width + 2 * wavelength;
+  if (amplitude <= 0) return `M ${x0} ${top} H ${x1} V ${bottom} H ${x0} Z`;
+  const half = wavelength / 2;
+  // A quadratic curve with its control point 2·amplitude away peaks at amplitude;
+  // each following T mirrors it, alternating crest and trough.
+  let d = `M ${x0} ${top} Q ${x0 + half / 2} ${top - 2 * amplitude} ${x0 + half} ${top}`;
+  let x = x0 + half;
+  while (x < x1) {
+    x += half;
+    d += ` T ${x} ${top}`;
+  }
+  return `${d} V ${bottom} H ${x0} Z`;
+}
 
 const SPLASH_PARTICLES = [
   { dx: -46, dy: -34 },
@@ -53,6 +77,9 @@ const SPLASH_PARTICLES = [
 
 export function FaucetScene({ phase, symbol, amount, balance, filled }: FaucetSceneProps) {
   const c = FAUCET_COLORS;
+  const surface = FAUCET_WALLET_SURFACE;
+  const waves = surface.style === 'waves';
+  const waveAmplitude = waves ? surface.waves.amplitude : 0;
   const label = FAUCET_COPY.walletBalance(balance, symbol);
   const labelSize = Math.min(
     WALLET_LABEL.maxFontSize,
@@ -65,6 +92,9 @@ export function FaucetScene({ phase, symbol, amount, balance, filled }: FaucetSc
     '--faucet-splash': `${FAUCET_TIMING_MS.splash}ms`,
     '--faucet-fall-distance': `${WALLET_SLOT_Y - NOZZLE.y - DROP_HEIGHT + 8}px`,
     '--faucet-wallet-fill-opacity': FAUCET_WALLET_FILL.opacity,
+    '--faucet-wave-length': `${FAUCET_WALLET_SURFACE.waves.wavelength}px`,
+    '--faucet-wave-duration': `${FAUCET_WALLET_SURFACE.waves.durationMs}ms`,
+    '--faucet-ripple-duration': `${FAUCET_WALLET_SURFACE.ripples.durationMs}ms`,
   } as CSSProperties;
 
   return (
@@ -116,6 +146,18 @@ export function FaucetScene({ phase, symbol, amount, balance, filled }: FaucetSc
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        {/* One gradient across the whole liquid, so wave layers match the body. */}
+        <linearGradient
+          id="faucet-wallet-energy"
+          gradientUnits="userSpaceOnUse"
+          x1={0}
+          y1={WALLET_FILL_TOP - FAUCET_WALLET_SURFACE.waves.amplitude}
+          x2={0}
+          y2={WALLET_BODY.y + WALLET_BODY.height}
+        >
+          <stop offset="0%" stopColor={c.energy} />
+          <stop offset="100%" stopColor={c.energyDeep} />
+        </linearGradient>
         {/* Exactly the wallet body's shape, so the fill never pokes past its corners. */}
         <clipPath id="faucet-wallet-clip">
           <rect x={WALLET_BODY.x} y={WALLET_BODY.y} width={WALLET_BODY.width} height={WALLET_BODY.height} rx={WALLET_BODY.rx} />
@@ -247,18 +289,52 @@ export function FaucetScene({ phase, symbol, amount, balance, filled }: FaucetSc
       </g>
 
       {/* Wallet */}
-      <g className="faucet-wallet">
+      <g
+        className="faucet-wallet"
+        // Pop from the wallet body's bottom center (its bounding box also spans the off-screen wave overhang).
+        style={{
+          transformBox: 'view-box',
+          transformOrigin: `${WALLET_BODY.x + WALLET_BODY.width / 2}px ${WALLET_BODY.y + WALLET_BODY.height}px`,
+        }}
+      >
         <rect x={238} y={240} width={104} height={20} rx={6} fill={c.metalMid} stroke={c.walletEdge} strokeWidth={0.75} />
         <rect x={232} y={252} width={116} height={60} rx={12} fill={c.wallet} stroke={c.walletEdge} strokeWidth={1.25} />
         <g clipPath="url(#faucet-wallet-clip)">
-          <rect
-            x={WALLET_BODY.x}
-            y={WALLET_FILL_TOP}
-            width={WALLET_BODY.width}
-            height={WALLET_BODY.y + WALLET_BODY.height - WALLET_FILL_TOP}
-            fill="url(#faucet-energy)"
-            className="faucet-wallet-fill"
-          />
+          {/* The liquid. Its top is wavy (and drifts) when FAUCET_WALLET_SURFACE.style is 'waves'. */}
+          <g className="faucet-wallet-fill">
+            {waves && surface.waves.backWaveOpacity > 0 && (
+              <path
+                d={liquidPath(waveAmplitude, surface.waves.wavelength, surface.waves.wavelength / 2)}
+                fill="url(#faucet-wallet-energy)"
+                opacity={surface.waves.backWaveOpacity}
+                className="faucet-wave faucet-wave-back"
+              />
+            )}
+            <path
+              d={liquidPath(waveAmplitude, surface.waves.wavelength)}
+              fill="url(#faucet-wallet-energy)"
+              className={waves ? 'faucet-wave' : undefined}
+            />
+          </g>
+          {/* Rings spreading across a flat surface, when the style is 'ripples'. */}
+          {surface.style === 'ripples' && (
+            <g className="faucet-wallet-ripples">
+              {Array.from({ length: surface.ripples.count }, (_, i) => (
+                <ellipse
+                  key={i}
+                  cx={RIPPLE_SPAN.from + ((i + 0.5) * (RIPPLE_SPAN.to - RIPPLE_SPAN.from)) / surface.ripples.count}
+                  cy={WALLET_FILL_TOP}
+                  rx={surface.ripples.width / 2}
+                  ry={surface.ripples.width / 9}
+                  fill="none"
+                  stroke={surface.ripples.color}
+                  strokeWidth={surface.ripples.strokeWidth}
+                  className="faucet-surface-ripple"
+                  style={{ animationDelay: `${(i * surface.ripples.durationMs) / surface.ripples.count}ms` }}
+                />
+              ))}
+            </g>
+          )}
         </g>
         <rect
           x={232}

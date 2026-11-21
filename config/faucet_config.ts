@@ -74,7 +74,7 @@ export const FAUCET_PAGE_META = {
 } as const;
 
 export const FAUCET_COPY = {
-  heading: 'Faucet',
+  heading: 'Test Token Faucet',
   subheading: 'Free testnet tokens, poured fresh from the cyber forest.',
   tokenLabel: 'Token',
   claim: 'Claim Tokens',
@@ -107,7 +107,7 @@ export const DOROTHY = {
 // Dorothy speaks on every step of the claim flow.
 export const DOROTHY_LINES = {
   greeting:
-    "Welcome, traveler! I'm glad you made it. We are in the Token Faucet, which you can use to get free cryptocurrency tokens. Use the select list to claim your tokens!",
+    "Welcome, traveler! I'm glad you made it. We are in the Test Token Faucet, which you can use to get test cryptocurrency tokens. Use the select list to claim your tokens!",
   tokenChosen: (symbol: string, network: string) =>
     `Ah, ${symbol} on ${network}. Good choice! Press “Claim Tokens” whenever you’re ready.`,
   needsWallet: (vm: 'evm' | 'svm') =>
@@ -187,7 +187,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
   // },
   {
     id: 'sol-devnet',
-    symbol: 'SOL',
+    symbol: 'Test SOL',
     name: 'Devnet SOL',
     iconSymbol: 'SOL Test',
     network: 'Solana Devnet',
@@ -198,7 +198,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
   },
   {
     id: 'eth-base-sepolia',
-    symbol: 'ETH',
+    symbol: 'Test ETH',
     name: 'Base Sepolia Ether',
     iconSymbol: 'ETH Test',
     network: 'Base Sepolia',
@@ -226,6 +226,31 @@ export const FAUCET_TIMING_MS = {
 export const FAUCET_WALLET_FILL = {
   opacity: 0.5,
 } as const;
+
+// How the top of the energy looks in a filled wallet:
+//   'waves'   – the surface rolls in two layers of moving waves
+//   'ripples' – a flat surface with small rings spreading across it
+//   'flat'    – a still, flat surface
+// Sizes are in the scene's SVG units. The surface sits between the "MY WALLET"
+// title and the dotted line, ~4 units apart, so a wave amplitude above ~2
+// starts to touch the title.
+export type FaucetWalletSurfaceStyle = 'waves' | 'ripples' | 'flat';
+export const FAUCET_WALLET_SURFACE = {
+  style: 'waves' as FaucetWalletSurfaceStyle,
+  waves: {
+    amplitude: 1.6, // height of a crest above the mean surface
+    wavelength: 26, // crest-to-crest distance (the wallet is 116 wide)
+    durationMs: 2400, // time for the front wave to travel one wavelength
+    backWaveOpacity: 0.55, // second wave behind it, moving the other way (0 = none)
+  },
+  ripples: {
+    count: 3, // rings spread evenly across the surface, taking turns
+    width: 28, // ring width at its largest
+    durationMs: 2600, // one ring's grow-and-fade
+    color: '#E8FFF9',
+    strokeWidth: 0.8,
+  },
+};
 
 // Title printed on the wallet, above its dotted line. Sizes are in the
 // scene's SVG units (the wallet is 116 wide; the strip above the dotted line

@@ -129,6 +129,10 @@ FaucetCard → lib/faucet/claim.ts (requestFaucetClaim)
   `GET /api/faucet/claim?tokenId=…&recipient=…` (→ `{ cooldownSeconds }`, the
   Redis TTL) whenever the token / wallet changes, so it survives reloads and
   turns off by itself when the cooldown ends. Strength: `FAUCET_WALLET_FILL`.
+- **Liquid surface** (`FAUCET_WALLET_SURFACE.style`): `'waves'` (two layers of
+  drifting waves; the liquid is one SVG path built by `liquidPath`),
+  `'ripples'` (flat surface with rings spreading across it, shown once the
+  energy settles), or `'flat'`.
 - `FAUCET_DEFAULT_TOKEN_ID` (tBION) is selected on load, so a token is always
   chosen.
 - **Not protected against:** one person using many addresses. Fine for a demo;
