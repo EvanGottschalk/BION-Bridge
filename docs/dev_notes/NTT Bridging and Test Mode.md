@@ -104,7 +104,9 @@ No code changes are needed.
 
 **Current deployments** (both Testnet, Solana Devnet ⇄ Base Sepolia, 9 decimals, Solana is the locking hub and Base the burning spoke):
 - `BRDGTST` (Bridge Test 48).
-- `tBION` (Test BION), added 2026-11-10. Solana mint `6TgX…ZPST` (Token-2022), manager `2dwv…LR8f`; Base token `0x6746…525f`, manager `0xfdde…9267`, transceiver `0x8fc2…40a9`.
+- `BION` (Test BION), redeployed 2026-11-26; replaces the deprecated `tBION`. Solana mint `G1oB…Kc3e` (Token-2022), manager `C2V9…kNgP`, custody `HWZz…BVt8`; Base token `0x51C5…6946`, manager `0x453e…3AFE`, transceiver `0x4e79…9821`.
+
+Test Mode uses the same token and chain icons as mainnet (ETH, BASE, SOL, BION). The old "Test"-bannered icon files are no longer used.
 
 ## 5. Known caveats
 

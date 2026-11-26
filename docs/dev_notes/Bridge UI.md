@@ -133,7 +133,7 @@ the UI, edit that array — nothing in this component needs to change.
 Network icons are the chain's gas-token image. `ChainIcon`
 (`components/bridge/chain-icons.tsx`) loads `TOKEN_ICON_URL(chain.iconSymbol)`,
 i.e. `src/image/tokens/webp/64px/<iconSymbol>.webp`: `ETH`, `BASE`, `SOL` on
-mainnet and `ETH Test`, `BASE Test`, `SOL Test` on testnets. If the image fails
+both mainnet and testnets (no separate "Test" icons). If the image fails
 to load it falls back to the built-in SVG picked by `iconKey`. It is used in the
 network dropdowns and the header wallet pills (Solana pill: the current mode's
 Solana chain; EVM pill: the connected chain, or the mode's first EVM chain

@@ -19,8 +19,8 @@ export const BRDGTST = {
   decimals: 9,
 };
 
-export const TBION = {
-  symbol: 'tBION',
+export const BION = {
+  symbol: 'BION',
   name: 'Test BION',
   address: '0x51C59D6B64245e0b67770144cafB9fD3Cdc16946',
   decimals: 9,

@@ -52,7 +52,7 @@ export const CHAIN_ICONS: Record<ChainIconKey, (p: IconProps) => ReactElement> =
   solana: SolanaIcon,
 };
 
-// The chain's gas-token image (ActiveChain.iconSymbol, e.g. "ETH" or "SOL Test")
+// The chain's gas-token image (ActiveChain.iconSymbol, e.g. "ETH" or "SOL")
 // from src/image/tokens; falls back to the built-in SVG if the image is missing.
 // `size` is in CSS pixels; callers pass a value from ICON_SIZES_PX.
 export const ChainIcon = ({

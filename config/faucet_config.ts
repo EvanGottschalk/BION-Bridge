@@ -19,7 +19,7 @@ export const FAUCET_COOLDOWN_SECONDS = 24 * 60 * 60;
 
 // Redis keys look like `${prefix}:${tokenId}:${address}`. Changing the prefix
 // resets everyone's cooldown.
-export const FAUCET_REDIS_KEY_PREFIX = 'faucet:v1';
+export const FAUCET_REDIS_KEY_PREFIX = 'faucet';
 
 // Names of the server-only environment variables (never NEXT_PUBLIC_).
 // Redis: the Vercel Upstash integration sets KV_REST_API_*; a direct Upstash
@@ -142,25 +142,25 @@ export const FAUCET_NATIVE = 'native';
 
 export const FAUCET_TOKENS: readonly FaucetToken[] = [
   // {
-  //   id: 'tbion-base-sepolia',
-  //   symbol: baseSepoliaTokens.TBION.symbol,
-  //   name: baseSepoliaTokens.TBION.name,
-  //   iconSymbol: 'tBION',
+  //   id: 'bion-base-sepolia',
+  //   symbol: baseSepoliaTokens.BION.symbol,
+  //   name: baseSepoliaTokens.BION.name,
+  //   iconSymbol: 'BION',
   //   network: 'Base Sepolia',
   //   vm: 'evm',
-  //   address: baseSepoliaTokens.TBION.address,
-  //   decimals: baseSepoliaTokens.TBION.decimals,
+  //   address: baseSepoliaTokens.BION.address,
+  //   decimals: baseSepoliaTokens.BION.decimals,
   //   amount: '100',
   // },
   {
-    id: 'tbion-solana-devnet',
-    symbol: solanaDevnetTokens.TBION.symbol,
-    name: solanaDevnetTokens.TBION.name,
-    iconSymbol: 'tBION',
+    id: 'bion-solana-devnet',
+    symbol: solanaDevnetTokens.BION.symbol,
+    name: solanaDevnetTokens.BION.name,
+    iconSymbol: 'BION',
     network: 'Solana Devnet',
     vm: 'svm',
-    address: solanaDevnetTokens.TBION.address,
-    decimals: solanaDevnetTokens.TBION.decimals,
+    address: solanaDevnetTokens.BION.address,
+    decimals: solanaDevnetTokens.BION.decimals,
     amount: '9999',
   },
   // {
@@ -189,7 +189,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
     id: 'sol-devnet',
     symbol: 'Test SOL',
     name: 'Devnet SOL',
-    iconSymbol: 'SOL Test',
+    iconSymbol: 'SOL',
     network: 'Solana Devnet',
     vm: 'svm',
     address: FAUCET_NATIVE,
@@ -200,7 +200,7 @@ export const FAUCET_TOKENS: readonly FaucetToken[] = [
     id: 'eth-base-sepolia',
     symbol: 'Test ETH',
     name: 'Base Sepolia Ether',
-    iconSymbol: 'ETH Test',
+    iconSymbol: 'ETH',
     network: 'Base Sepolia',
     vm: 'evm',
     address: FAUCET_NATIVE,
@@ -265,7 +265,7 @@ export const FAUCET_WALLET_TITLE = {
 } as const;
 
 // Selected when the page loads, so a token is always chosen.
-export const FAUCET_DEFAULT_TOKEN_ID = 'tbion-solana-devnet';
+export const FAUCET_DEFAULT_TOKEN_ID = 'bion-solana-devnet';
 
 // How balances are written on the wallet: "19,998" / "0.0231".
 export const FAUCET_BALANCE_FORMAT = {

@@ -79,14 +79,14 @@ RainbowKit's or the Solana adapter's modal.
 
 ## 6. Real claims (server)
 
-Tokens: tBION and SOL on Solana Devnet, ETH on Base Sepolia (`FAUCET_TOKENS`).
+Tokens: BION and SOL on Solana Devnet, ETH on Base Sepolia (`FAUCET_TOKENS`).
 Each address can claim **each token once per `FAUCET_COOLDOWN_SECONDS`** (24h).
 
 ```
 FaucetCard → lib/faucet/claim.ts (requestFaucetClaim)
   → POST /api/faucet/claim  { tokenId, recipient }   app/api/faucet/claim/route.ts
        1. validate token id (amount comes from config, never the request) + address
-       2. reserve the cooldown: Redis SET faucet:v1:{tokenId}:{address} NX EX 86400
+       2. reserve the cooldown: Redis SET faucet:{tokenId}:{address} NX EX 86400
           → already set? 429 { code: 'cooldown', retryAfterSeconds }
        3. send from the faucet wallet       lib/faucet/server/evm.ts | solana.ts
        4. send failed (nothing left the wallet)? DEL the key so they can retry
@@ -104,7 +104,7 @@ FaucetCard → lib/faucet/claim.ts (requestFaucetClaim)
 - **RPC:** Base Sepolia uses `BASE_SEPOLIA.rpcUrls` (Alchemy, then public);
   Solana uses Helius devnet if `NEXT_PUBLIC_HELIUS_API_KEY` is set, else the
   public devnet RPC (`FAUCET_SOLANA_RPC_URLS`).
-- **SPL tokens:** the mint's owner decides the program (tBION is Token-2022).
+- **SPL tokens:** the mint's owner decides the program (BION is Token-2022).
   The faucet pays the ~0.002 SOL rent to create a recipient's token account
   the first time.
 - **Confirmation:** the route waits up to `FAUCET_CONFIRM_TIMEOUT_MS` for the
@@ -132,7 +132,7 @@ FaucetCard → lib/faucet/claim.ts (requestFaucetClaim)
   drifting waves; the liquid is one SVG path built by `liquidPath`),
   `'ripples'` (flat surface with rings spreading across it, shown once the
   energy settles), or `'flat'`.
-- `FAUCET_DEFAULT_TOKEN_ID` (tBION) is selected on load, so a token is always
+- `FAUCET_DEFAULT_TOKEN_ID` (BION) is selected on load, so a token is always
   chosen.
 - **Not protected against:** one person using many addresses. Fine for a demo;
   add a per-IP limit or a captcha if it gets abused.

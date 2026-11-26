@@ -148,7 +148,7 @@ export const NTT_BRIDGE_INFO: Record<string, NttDeployment> = { // tokens bridge
       },
     },
   },
-  tBION: {
+  BION: {
     network: 'Testnet', // Wormhole network the deployment lives on; only offered while Test Mode is ON
     chains: {
       [CHAINS.SOLANA_DEVNET]: {
