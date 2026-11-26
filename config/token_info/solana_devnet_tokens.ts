@@ -8,6 +8,6 @@ export const BRDGTST = {
 export const TBION = {
   symbol: 'tBION',
   name: 'Test BION',
-  address: '6TgXeZhP4Z5WVCMAbVPN35YbcBFh8sk2jqzZstXDZPST',
+  address: 'G1oBqZaWiew8oh9JmbPZ1iQ9SfB6zirLUSURCzm1Kc3e',
   decimals: 9,
 };

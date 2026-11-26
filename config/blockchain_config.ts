@@ -152,15 +152,15 @@ export const NTT_BRIDGE_INFO: Record<string, NttDeployment> = { // tokens bridge
     network: 'Testnet', // Wormhole network the deployment lives on; only offered while Test Mode is ON
     chains: {
       [CHAINS.SOLANA_DEVNET]: {
-        tokenContractAddress: '6TgXeZhP4Z5WVCMAbVPN35YbcBFh8sk2jqzZstXDZPST', // Token-2022 mint, 9 decimals
-        NTTcontractAddress: '2dwv7j7DFABCgMCKxQ79kgAfjea35W8P2qBcHHAoLR8f', // NTT manager program
-        NTTtransceiverAddress: '2dwv7j7DFABCgMCKxQ79kgAfjea35W8P2qBcHHAoLR8f', // Solana NTT embeds the Wormhole transceiver in the manager program
-        mode: 'locking', // hub; on-chain config mode 0, tokens held in custody HMzNwcsWqdpDLohAoB8n6Do1prNr5J3rz5awpFQdmQy6
+        tokenContractAddress: 'G1oBqZaWiew8oh9JmbPZ1iQ9SfB6zirLUSURCzm1Kc3e', // Token-2022 mint, 9 decimals
+        NTTcontractAddress: 'C2V9NdpB8UC2GRkfRQFEPP1gwvDMs5c3jwejWby4kNgP', // NTT manager program
+        NTTtransceiverAddress: 'C2V9NdpB8UC2GRkfRQFEPP1gwvDMs5c3jwejWby4kNgP', // Solana NTT embeds the Wormhole transceiver in the manager program
+        mode: 'locking', // hub; on-chain config mode 0, tokens held in custody HWZzsWueLCKgbVyK2mZ8b92bQ4x1evVkMdDPk4jUBVt8
       },
       [CHAINS.BASE_SEPOLIA]: {
-        tokenContractAddress: '0x67462E782B0953153FEA009ef9a2b6eB7d97525f', // ERC-20, 9 decimals
-        NTTcontractAddress: '0xfdde63335358ec5a19Fec2147Ff612fa820A9267', // NttManager v2.0.0
-        NTTtransceiverAddress: '0x8fc292677Fc6A9fb017a78DBae1f1702EcE840a9', // WormholeTransceiver, read from NttManager.getTransceivers()
+        tokenContractAddress: '0x51C59D6B64245e0b67770144cafB9fD3Cdc16946', // ERC-20, 9 decimals
+        NTTcontractAddress: '0x453eA4BDbEC11963f2f3e49CA12B27aC26083AFE', // NttManager v2.0.0
+        NTTtransceiverAddress: '0x4e79407A25FC20B35B783ed16831ce67519f9821', // WormholeTransceiver, read from NttManager.getTransceivers()
         mode: 'burning', // spoke; NttManager.getMode() === 1, mints on inbound and burns on outbound
       },
     },

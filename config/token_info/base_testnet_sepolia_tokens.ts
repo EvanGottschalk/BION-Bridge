@@ -22,6 +22,6 @@ export const BRDGTST = {
 export const TBION = {
   symbol: 'tBION',
   name: 'Test BION',
-  address: '0x67462E782B0953153FEA009ef9a2b6eB7d97525f',
+  address: '0x51C59D6B64245e0b67770144cafB9fD3Cdc16946',
   decimals: 9,
 };
