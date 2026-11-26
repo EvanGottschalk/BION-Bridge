@@ -4,7 +4,7 @@
 import type { StaticImageData } from 'next/image';
 import heroImage from '../src/image/hero_image.png';
 import logoImage from '../src/image/logo.png';
-import { FAUCET_V1_ROUTE } from './faucet_config';
+import { FAUCET_ROUTE } from './faucet_config';
 
 export const BRAND_PRIMARY = '#4A6CF7';
 export const BRAND_PRIMARY_SOFT = 'rgba(74,108,247,0.25)';
@@ -50,7 +50,7 @@ export const APP_THEME_COLOR = '#000000';
 
 export const NAV_LINKS = [
   { label: 'Bridge', href: '/' },
-  { label: 'Faucet', href: FAUCET_V1_ROUTE },
+  { label: 'Faucet', href: FAUCET_ROUTE },
   { label: 'Powered by Aphid', href: 'https://aphid.com' },
   { label: 'BION Token', href: 'https://www.bionfoundation.org/' },
 ] as const;

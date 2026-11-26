@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { BridgeHeader } from '@/components/bridge/header';
 import { BridgeFooter } from '@/components/bridge/footer';
-import { CyberForestBackground } from '@/components/faucet/v1/cyber-forest-background';
-import { FaucetCard } from '@/components/faucet/v1/faucet-card';
+import { CyberForestBackground } from '@/components/faucet/cyber-forest-background';
+import { FaucetCard } from '@/components/faucet/faucet-card';
 import { FAUCET_COLORS, FAUCET_COPY, FAUCET_PAGE_META } from '@/config/faucet_config';
 import { APP_TITLE } from '@/config/ui_config';
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: FAUCET_PAGE_META.description,
 };
 
-export default function FaucetV1Page() {
+export default function FaucetPage() {
   return (
     <div className="min-h-screen text-foreground flex flex-col">
       <CyberForestBackground />

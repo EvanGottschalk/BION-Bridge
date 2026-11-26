@@ -1,20 +1,19 @@
 # Faucet
 
-The testnet faucet page at `/faucet/v1` (`app/faucet/v1/page.tsx`). Versioned
-in the URL so alternative designs can live at `/faucet/v2`, etc. side by side.
-All literals live in `config/faucet_config.ts`. The header nav links to it via
-`NAV_LINKS` in `config/ui_config.ts` (`FAUCET_V1_ROUTE`).
+The testnet faucet page at `/faucet` (`app/faucet/page.tsx`). All literals
+live in `config/faucet_config.ts`. The header nav links to it via `NAV_LINKS`
+in `config/ui_config.ts` (`FAUCET_ROUTE`).
 
 ## 1. Layout
 
 ```
-CyberForestBackground   components/faucet/v1/cyber-forest-background.tsx
+CyberForestBackground   components/faucet/cyber-forest-background.tsx
 BridgeHeader            (shared)
 <main>
   Heading + subheading
-  FaucetCard            components/faucet/v1/faucet-card.tsx
-    ├─ FaucetScene      components/faucet/v1/faucet-scene.tsx   (SVG faucet + wallet)
-    ├─ DorothyDialogue  components/faucet/v1/dorothy-dialogue.tsx
+  FaucetCard            components/faucet/faucet-card.tsx
+    ├─ FaucetScene      components/faucet/faucet-scene.tsx   (SVG faucet + wallet)
+    ├─ DorothyDialogue  components/faucet/dorothy-dialogue.tsx
     └─ Token select + Claim button
   BridgeFooter          (shared)
 ```
@@ -52,7 +51,7 @@ dropping → success (or failure / cooldown).
 ## 4. Claim flow and animation
 
 `FaucetCard` drives a `phase` that `FaucetScene` exposes as `data-phase` on
-the SVG. All motion is CSS in `app/globals.css` under the "Faucet v1" section,
+the SVG. All motion is CSS in `app/globals.css` under the "Faucet" section,
 keyed off `data-phase`:
 
 | phase      | what happens                                                       | duration |

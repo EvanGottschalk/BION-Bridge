@@ -7,7 +7,7 @@ import * as baseSepoliaTokens from './token_info/base_testnet_sepolia_tokens';
 import * as solanaDevnetTokens from './token_info/solana_devnet_tokens';
 import { BASE_SEPOLIA, HELIUS_API_KEY_PLACEHOLDER, SOLANA_DEVNET } from './chain_info';
 
-export const FAUCET_V1_ROUTE = '/faucet/v1';
+export const FAUCET_ROUTE = '/faucet';
 
 // ── Real claims ─────────────────────────────────────────────────────────────
 // The page POSTs { tokenId, recipient } here; app/api/faucet/claim/route.ts

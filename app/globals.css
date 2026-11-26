@@ -171,7 +171,7 @@
     inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* ── Faucet v1 (components/faucet/v1) ─────────────────────────────────────
+/* ── Faucet (components/faucet) ───────────────────────────────────────────
    Colors come from config/faucet_config.ts via SVG attributes or CSS vars;
    these rules only move things. Phase timings arrive as --faucet-* vars. */
 
