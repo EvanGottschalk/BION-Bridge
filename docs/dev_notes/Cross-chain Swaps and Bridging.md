@@ -372,7 +372,7 @@ fee wasn't collected for that swap, usually due to a config mismatch.
 
 ## 9. Token discovery for the selector
 
-The token selector's "From Relay" results use `relayApi.searchCurrencies`
+The token selector's Relay search results (appended to its single list) use `relayApi.searchCurrencies`
 (`POST /currencies/v2`):
 
 ```ts

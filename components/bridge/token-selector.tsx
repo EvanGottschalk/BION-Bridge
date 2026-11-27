@@ -95,8 +95,12 @@ export function TokenSelector({ label, chain, selected, onSelect, locked }: Toke
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const featured = useMemo(() => getFeaturedTokens(chain), [chain]);
-  const full = useMemo(() => getTokenList(chain), [chain]);
+  // One flat list: featured tokens first, then the rest of the chain's tokens.
+  const full = useMemo(() => {
+    const featured = getFeaturedTokens(chain);
+    const seen = new Set(featured.map((t) => t.address.toLowerCase()));
+    return [...featured, ...getTokenList(chain).filter((t) => !seen.has(t.address.toLowerCase()))];
+  }, [chain]);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -150,11 +154,12 @@ export function TokenSelector({ label, chain, selected, onSelect, locked }: Toke
     );
   }, [full, query]);
 
-  const mergedRemote = useMemo(() => {
-    if (!remote.length) return [];
+  // Relay search results join the same list, after the local matches.
+  const rows = useMemo(() => {
+    if (!remote.length) return localMatches;
     const localAddrs = new Set(full.map((t) => t.address.toLowerCase()));
-    return remote.filter((t) => !localAddrs.has(t.address.toLowerCase()));
-  }, [remote, full]);
+    return [...localMatches, ...remote.filter((t) => !localAddrs.has(t.address.toLowerCase()))];
+  }, [localMatches, remote, full]);
 
   return (
     <div
@@ -224,32 +229,9 @@ export function TokenSelector({ label, chain, selected, onSelect, locked }: Toke
             </div>
 
             <div className="max-h-72 overflow-y-auto">
-              {!query && featured.length > 0 && (
-                <>
-                  <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Featured
-                  </div>
-                  {featured.map((t) => (
-                    <TokenRow
-                      key={`f-${t.address}-${t.symbol}`}
-                      token={t}
-                      chain={chain}
-                      active={selected?.address === t.address}
-                      onClick={() => {
-                        onSelect(t);
-                        setOpen(false);
-                      }}
-                    />
-                  ))}
-                  <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    All tokens
-                  </div>
-                </>
-              )}
-
-              {localMatches.map((t) => (
+              {rows.map((t) => (
                 <TokenRow
-                  key={`l-${t.address}-${t.symbol}`}
+                  key={`${t.address}-${t.symbol}`}
                   token={t}
                   chain={chain}
                   active={selected?.address === t.address}
@@ -260,27 +242,7 @@ export function TokenSelector({ label, chain, selected, onSelect, locked }: Toke
                 />
               ))}
 
-              {mergedRemote.length > 0 && (
-                <>
-                  <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    From Relay
-                  </div>
-                  {mergedRemote.map((t) => (
-                    <TokenRow
-                      key={`r-${t.address}-${t.symbol}`}
-                      token={t}
-                      chain={chain}
-                      active={selected?.address === t.address}
-                      onClick={() => {
-                        onSelect(t);
-                        setOpen(false);
-                      }}
-                    />
-                  ))}
-                </>
-              )}
-
-              {localMatches.length === 0 && mergedRemote.length === 0 && !loading && (
+              {rows.length === 0 && !loading && (
                 <div className="px-4 py-6 text-center text-xs text-muted-foreground">
                   No tokens found.
                 </div>

@@ -75,7 +75,7 @@ export const FAUCET_PAGE_META = {
 
 export const FAUCET_COPY = {
   heading: 'Test Token Faucet',
-  subheading: 'Free testnet tokens, poured fresh from the cyber forest.',
+  subheading: 'Get free test tokens and learn about blockchain',
   tokenLabel: 'Token',
   claim: 'Claim Tokens',
   claiming: 'Claiming…',

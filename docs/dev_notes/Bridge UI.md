@@ -160,15 +160,16 @@ dropdowns inside the card.
 
 ### 3.2 TokenSelector
 
-`components/bridge/token-selector.tsx` is more involved. Per chain it shows:
+`components/bridge/token-selector.tsx` is more involved. Per chain it shows
+**one flat list with no section headers**, in this order:
 
 1. **Featured tokens** — `FEATURED_TOKENS_BY_CHAIN` in
-   `config/token_info/index.ts`. These are the curated top-6 (ETH/USDC/USDT/…)
-   that appear without scrolling and without a search query.
-2. **All local tokens** — every token defined under `config/token_info/*` for
-   that chain, filtered against the search query (symbol, name, or exact
-   address match).
-3. **Remote results from Relay** — when the query is ≥ 2 characters, debounced
+   `config/token_info/index.ts`, so the curated ones (ETH/USDC/USDT/…) sit at
+   the top.
+2. **The rest of the local tokens** — every other token defined under
+   `config/token_info/*` for that chain. Featured and local tokens are filtered
+   against the search query (symbol, name, or exact address match).
+3. **Remote results from Relay**, appended to the same list — when the query is ≥ 2 characters, debounced
    by `RELAY_TOKEN_SEARCH_DEBOUNCE_MS` (250 ms), we hit
    `relayApi.searchCurrencies` (`POST /currencies/v2`) with
    `useExternalSearch: true` and `limit: RELAY_TOKEN_SEARCH_LIMIT` (20). Any
