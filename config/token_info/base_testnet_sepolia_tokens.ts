@@ -12,13 +12,6 @@ export const USDC = {
   decimals: 6,
 };
 
-export const BRDGTST = {
-  symbol: 'BRDGTST',
-  name: 'Bridge Test 48',
-  address: '0x27f73ff4f073B4Bf98f910B52F522eDc4778eDaA',
-  decimals: 9,
-};
-
 export const BION = {
   symbol: 'BION',
   name: 'Test BION',
